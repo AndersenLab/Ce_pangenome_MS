@@ -139,16 +139,15 @@ total_size2 <- filt_calls %>%
 SV_LEN <- ggplot() +
   geom_bar(data = total_size2, aes(x = type_total_length / 1e6, y = strain, fill = sv_type), stat = "identity") +
   scale_fill_manual(values = c("INS" = "blue", "DEL" = "red", "INV" = "gold")) +
-  labs(x = "Length of SVs (Mb)", fill = "SV type") +
+  labs(x = "Length of SVs (Mb)", fill = "SV type", y = "Strains") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
         panel.grid.major.y = element_blank(),
-        axis.title.y = element_blank(),
         axis.text = element_text(size = 10, color = 'black'),
         axis.text.y = element_blank(),
         axis.ticks.y = element_blank(),
-        plot.margin = margin(l = 20, r = 5, t = 5, b = 5),
+        # plot.margin = margin(l = 20, r = 5, t = 5, b = 5),
         legend.title = element_text(size = 10, color = 'black'),
         legend.box.background = element_rect(color = 'black', fill = NA),
         legend.position = "inside",
