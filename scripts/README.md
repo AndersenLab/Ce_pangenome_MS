@@ -7,5 +7,5 @@ scripts/
 - genomes/
 
 ## genomes/
-- `elegans_asm_stats.R`  
+- `elegans_map_relatedness_asmStats.R`  
 	- Concatenates world map indicating where wild strains have been collected, relatedness matrix, and genome assembly stats to create Figure 1
