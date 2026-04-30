@@ -63,9 +63,9 @@ MAP <- ggplot() +
 ####################################################################################################
 ####################################################################################################
 
-tree <- ape::read.tree("/vast/eande106/data/c_elegans/WI/tree/20250625/WI.20250625.hard-filter.isotype.min4.tree")
+tree <- ape::read.tree("../../processed_data/genome_resources/Ce_20250625_species_tree.tree")
 
-isos <- readr::read_tsv(file="/vast/eande106/data/c_elegans/WI/concordance/20250625/isotype_groups.tsv") %>%
+isos <- readr::read_tsv(file="../../processed_data/genome_resources/Ce_isotype_groups.tsv") %>%
   dplyr::group_by(isotype_ref_strain) %>%
   dplyr::summarise(count=n()) %>%
   dplyr::rename(isotype=isotype_ref_strain) 
@@ -74,7 +74,7 @@ isos <- readr::read_tsv(file="/vast/eande106/data/c_elegans/WI/concordance/20250
 rn_isos <- c("ECA243","ECA246","ECA248","ECA250","ECA251","ECA259")
 
 #read pairwise similarity estimates
-conc <- readr::read_tsv("/vast/eande106/data/c_elegans/WI/concordance/20250625/gtcheck.txt") %>%
+conc <- readr::read_tsv("../../processed_data/genome_resources/684_Ce_concordance.txt") %>%
   dplyr::filter(i %in% isos$isotype  & j %in% isos$isotype)
 
 #construct symmetric pairwise similarity matrix
@@ -253,10 +253,7 @@ final_plot <- cowplot::plot_grid(
   MAP, bottom_row,
   ncol = 1,
   rel_heights = c(1,1),
-  labels = c("a")
-)
-final_plot
-
+  labels = c("a")) +  theme(plot.background = element_rect(fill = "white", color = NA))
 
 # Save the plot
 ggsave("../../figures/strain_selection_genome_stats.png", final_plot, width = 7.5, height = 7.5, dpi = 600)
