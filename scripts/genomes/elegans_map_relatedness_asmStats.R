@@ -29,7 +29,7 @@ geo_initial <- readr::read_tsv("../../processed_data/genome_resources/elegans_is
 # Isolation site of each wild strain
 geo <- geo_initial %>%
   dplyr::select(isotype, lat, long, geo) %>%
-  dplyr::mutate(hifi_sequence = ifelse(isotype %in% strains, "yes", "no")) %>%
+  dplyr::mutate(hifi_sequence = ifelse(isotype %in% strains, "Yes", "No")) %>%
   dplyr::mutate(lat = as.numeric(lat),
                 long = as.numeric(long))
 # SIX STRAINS ARE MISSING LAT AND LONG INFORMATION #################################################################################################################
@@ -41,16 +41,16 @@ world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 # Plotting where isotype strains have been collected and which ones were selected for sequencing
 MAP <- ggplot() +
   geom_sf(data = world, fill = "white", color = "black", linewidth = 0.2) +
-  geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 2, alpha = 0.85) +
-  scale_color_manual(values = c("yes" = "red", "no" = "black")) +
+  geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 1, alpha = 0.85) +
+  scale_color_manual(values = c("Yes" = "red", "No" = "black")) +
   coord_sf(expand = FALSE) +
   theme_minimal() +
-  labs(x = NULL, y = NULL, color = "Selected for HiFi sequencing") +
+  labs(x = NULL, y = NULL, color = "Selected for\nHiFi sequencing") +
   theme(
     legend.title = element_text(size = 11, color = 'black'),
     legend.text = element_text(size = 11, color = 'black'),
     legend.position = "inside",
-    legend.position.inside = c(0.1,0.3),
+    legend.position.inside = c(0.1,0.25),
     axis.text = element_blank(),
     panel.grid = element_blank()) 
 
@@ -135,12 +135,13 @@ heatmap_grob2 <- grid::grid.grabExpr({
       row_labels = row_labels,        # <-- put the vector here
       show_column_names = FALSE,
       row_names_side = "left",
-      row_names_gp = grid::gpar(fontsize = 12),
+      row_names_gp = grid::gpar(fontsize = 7),
       na_col = "white",
       heatmap_legend_param = list(
         title_gp = grid::gpar(fontsize = 10, fontface = "plain"),  # <-- title: not bold, size 10
         labels_gp = grid::gpar(fontsize = 10))
     ),
+    padding = unit(c(b = 1, l = 5, t = 1, r = 5), "mm")
   )
 })
 
@@ -241,13 +242,13 @@ base <- cowplot::plot_grid(cowplot::plot_grid(
   nrow = 2) + draw_label("Megabases", x=0.007, y=0.5, vjust= 1.5, angle=90, size = 12, color = 'black'))
 
 STATS <- cowplot::ggdraw(base) +
-  draw_line(x = c(0.145, 0.16), y = c(0.535, 0.540), size = 0.6) +
-  draw_line(x = c(0.145, 0.16), y = c(0.47, 0.475), size = 0.6)
+  draw_line(x = c(0.223, 0.238), y = c(0.535, 0.540), size = 0.6) +
+  draw_line(x = c(0.223, 0.238), y = c(0.47, 0.475), size = 0.6)
 STATS
 
 
 # Concatenate to make final plot
-bottom_row <- cowplot::plot_grid(MATRIX, STATS, ncol = 2, rel_widths = c(1,1), labels = c("b","c"))
+bottom_row <- cowplot::plot_grid(MATRIX, STATS, ncol = 2, rel_widths = c(2,1), labels = c("b","c"))
 
 final_plot <- cowplot::plot_grid(
   MAP, bottom_row,
@@ -257,9 +258,3 @@ final_plot <- cowplot::plot_grid(
 
 # Save the plot
 ggsave("../../figures/strain_selection_genome_stats.png", final_plot, width = 7.5, height = 7.5, dpi = 600)
-
-
-
-
-
-
