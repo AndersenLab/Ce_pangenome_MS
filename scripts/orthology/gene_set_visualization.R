@@ -21,8 +21,8 @@ library(data.table)
 # Pulling all genes, coordinates, and alignments for all WSs and N2 #
 # ======================================================================================================================================================================================== #
 # genes_strain <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/raw_data/assemblies/elegans/gff/116_genesOnly_strainRes.tsv", col_names = c("contig","type", "start", "end", "strand", "attributes", "strain")) 
-genes_strain <- readr::read_tsv("../../processed_data/genome_resources/140Ws_CGC1_longestIsoGenes_BRAKER.tsv", col_names = c("seqid","source", "type", "start", "end", "score", "strand", "phase", "attributes", "strain")) %>% dplyr::filter(strain != "ECA396")
-N2_gff <- ape::read.gff("../../processed_data/genome_resources/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") %>% dplyr::mutate(strain="N2")
+genes_strain <- readr::read_tsv("../../processed_data/genome_resources/genomes/140Ws_CGC1_longestIsoGenes_BRAKER.tsv", col_names = c("seqid","source", "type", "start", "end", "score", "strand", "phase", "attributes", "strain")) %>% dplyr::filter(strain != "ECA396")
+N2_gff <- ape::read.gff("../../processed_data/genome_resources/genomes/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") %>% dplyr::mutate(strain="N2")
 genes_strain <- rbind(genes_strain,N2_gff)
 all_genes_strain <- genes_strain %>%
   dplyr::mutate(attributes = gsub("ID=gene:","",attributes)) %>%

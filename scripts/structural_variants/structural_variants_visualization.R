@@ -17,7 +17,7 @@ library(grid)
 ####################################################################################################
 ####################################################################################################
 merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_merged_SVs.tsv")
-N2_gff <- ape::read.gff("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/raw_data/assemblies/elegans/gff/longest_isoform/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") 
+N2_gff <- ape::read.gff("../../processed_data/genome_resources/genome_data/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") 
 n2_genes_plt <- N2_gff %>%
   dplyr::filter(type == "gene") %>%
   dplyr::mutate(attributes = gsub("ID=gene:","",attributes)) %>%
@@ -170,9 +170,9 @@ SV_LEN
 
 ####################################################################################################
 ####################################################################################################
-geo_initial <- readr::read_tsv("../../processed_data/genome_resources/elegans_isotypes_sampling_geo.tsv")
-hawaii_islands <- readr::read_tsv("../../processed_data/genome_resources/elegans_isotypes_sampling_geo_hawaii_islands.tsv") %>% dplyr::select(isotype,collection_island_Hawaii)
-WSs <- readr::read_tsv("../../processed_data/genome_resources/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::rename(strain = Strain) %>% dplyr::pull()
+geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")
+hawaii_islands <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo_hawaii_islands.tsv") %>% dplyr::select(isotype,collection_island_Hawaii)
+WSs <- readr::read_tsv("../../processed_data/genome_resources/genome_data/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::rename(strain = Strain) %>% dplyr::pull()
 
 # Adding Hawaiian island resolution
 geo <- geo_initial %>%
@@ -242,13 +242,13 @@ PCA
 
 ####################################################################################################
 ####################################################################################################
-snps <- readr::read_tsv("../../processed_data/genome_resources/140WSs_biallelicSNPs.tsv", col_names = c("chrom","pos","ref","alt")) 
+snps <- readr::read_tsv("../../processed_data/genome_resources/genome_data/140WSs_biallelicSNPs.tsv", col_names = c("chrom","pos","ref","alt")) 
 merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_merged_SVs.tsv")
 
 # Outer ring of chromosomes (gene map of gene models represented with black rectangles)
 ## Chromosome IDs and sizes (start is always equal to zero)
 chr_order <- c("I","II","III","IV","V","X")
-chrom_sizes <- readr::read_tsv("../../processed_data/genome_resources/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
+chrom_sizes <- readr::read_tsv("../../processed_data/genome_resources/genome_data/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
   dplyr::mutate(chrom = factor(chrom, levels = chr_order)) %>%
   dplyr::mutate(chrom = as.character(chrom))
 

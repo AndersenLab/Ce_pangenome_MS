@@ -18,13 +18,13 @@ library(ComplexHeatmap)
 ####################################################################################################
 
 # Strain list
-strains <- readr::read_tsv("../../processed_data/genome_resources/wild_strain_genome_stats.tsv") %>%
+strains <- readr::read_tsv("../../processed_data/genome_resources/genome_data/wild_strain_genome_stats.tsv") %>%
   dplyr::select(Strain) %>%
   dplyr::rename(strain = Strain) %>% 
   dplyr::pull()
 
 # Assessing if IPR term is enriched in specific geo locations
-geo_initial <- readr::read_tsv("../../processed_data/genome_resources/elegans_isotypes_sampling_geo.tsv")
+geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")
 
 # Isolation site of each wild strain
 geo <- geo_initial %>%
@@ -63,9 +63,9 @@ MAP <- ggplot() +
 ####################################################################################################
 ####################################################################################################
 
-tree <- ape::read.tree("../../processed_data/genome_resources/Ce_20250625_species_tree.tree")
+tree <- ape::read.tree("../../processed_data/genome_resources/trees/Ce_20250625_species_tree.tree")
 
-isos <- readr::read_tsv(file="../../processed_data/genome_resources/Ce_isotype_groups.tsv") %>%
+isos <- readr::read_tsv(file="../../processed_data/genome_resources/isotypes/Ce_isotype_groups.tsv") %>%
   dplyr::group_by(isotype_ref_strain) %>%
   dplyr::summarise(count=n()) %>%
   dplyr::rename(isotype=isotype_ref_strain) 
@@ -74,7 +74,7 @@ isos <- readr::read_tsv(file="../../processed_data/genome_resources/Ce_isotype_g
 rn_isos <- c("ECA243","ECA246","ECA248","ECA250","ECA251","ECA259")
 
 #read pairwise similarity estimates
-conc <- readr::read_tsv("../../processed_data/genome_resources/684_Ce_concordance.txt") %>%
+conc <- readr::read_tsv("../../processed_data/genome_resources/isotypes/684_Ce_concordance.txt") %>%
   dplyr::filter(i %in% isos$isotype  & j %in% isos$isotype)
 
 #construct symmetric pairwise similarity matrix
@@ -156,7 +156,7 @@ MATRIX <- ggplotify::as.ggplot(heatmap_grob2)
 ####################################################################################################
 ####################################################################################################
 # Reading in genome stats
-stats <- readr::read_tsv("../../processed_data/genome_resources/wild_strain_genome_stats.tsv") %>%
+stats <- readr::read_tsv("../../processed_data/genome_resources/genome_data/wild_strain_genome_stats.tsv") %>%
   dplyr::select(Strain,`Number of contigs`,`Genome size`, `Contig N50`, `Contig L90`, `Contig N90`, `Coverage`, `BUSCO completeness (genome)`) %>%
   dplyr::rename(strain = Strain, n_contigs = `Number of contigs`, contig_bp = `Genome size`, ctg_N50 = `Contig N50`, ctg_L90 = `Contig L90`, ctg_N90 = `Contig N90`)
 
