@@ -18,7 +18,7 @@ library(ggforce)
 # ======================================================================================================================================================================================== #
 # Pulling genes for all WSs and N2 
 # ======================================================================================================================================================================================== #
-genes_strain <- readr::read_tsv("../../processed_data/genome_resources/annotation/140Ws_CGC1_longestIsoGenes_BRAKER.tsv", col_names = c("seqid","source", "type", "start", "end", "score", "strand", "phase", "attributes", "strain")) %>% dplyr::filter(strain != "ECA396")
+genes_strain <- readr::read_tsv("../../processed_data/genome_resources/annotation/140Ws_CGC1_longestIsoGenes_BRAKER.tsv", col_names = c("seqid","source", "type", "start", "end", "score", "strand", "phase", "attributes", "strain"))
 N2_gff <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") %>% dplyr::mutate(strain="N2")
 genes_strain <- rbind(genes_strain,N2_gff)
 all_genes_strain <- genes_strain %>%
@@ -52,8 +52,6 @@ strainCol_c2 <- gsub("c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.prot
 colnames(ortho_genes_dd) <- strainCol_c2
 
 ortho_count <- ortho_genes_dd
-
-# write.table("") ################################## WRITE CLEANED OG TSV TO ../../PROCESSED_DATA/ORHTOLOGY/ AND ADD AS A SUPPLEMENTARY TABLE
 
 strainCol_c2_u <- strainCol_c2[!strainCol_c2 %in% c("Orthogroup")]
 
@@ -90,6 +88,15 @@ all_relations_private <- private_ortho_count %>%
 
 all_relations <- all_relations_pre %>%
   dplyr::bind_rows(all_relations_private)
+
+
+# Saving tables of OG data
+og_count_table <- all_relations %>% dplyr::rename_with(~ gsub("_count", "", .), contains("_count"))
+all_OGs <- ortho_genes_dd %>% dplyr::bind_rows(private_OGs)
+
+write.table(og_count_table, "../../processed_data/orthology/orthofinder/OG_relations_matrix_count.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
+
+write.table(all_OGs, "../../tables/all_OGs_matrix.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
 
 
 # Plotting OG gnee set histogram
