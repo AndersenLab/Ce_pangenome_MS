@@ -680,7 +680,7 @@ all_OGs <- readr::read_tsv("../../tables/all_OGs_matrix.tsv")
 # Adding pangenome gene set classification to OG matrix with gene names
 all_class <- all_OGs %>% dplyr::left_join(class, by = "Orthogroup") 
 
-# Creating a long table, where every row has a gene in the pangenome and the gene set that it contributes tos
+# Creating a long table, where every row has a gene in the pangenome and the gene set that it contributes to
 long_class <- all_class %>%
   tidyr::pivot_longer(
     cols = -c(Orthogroup, class),
@@ -726,6 +726,13 @@ ws_genes_hdrs <- foverlaps(
   y = ws_hdrs,
   type = "any",
   nomatch = NA) 
+
+# Writing a table of all WS genes in HDRs
+ws_hdr_genes <- ws_genes_hdrs %>%
+  dplyr::filter(!is.na(start)) %>%
+  dplyr::select(strain, gene, class)
+
+# write.table(ws_hdr_genes, "../../processed_data/hdr_liftover/wild_strain_genes_inHDRs.tsv", sep = '\t', quote = F, col.names = T, row.names = F)
 
 # Calculating the number of genes in each gene set for every strain
 ws_genes_count <- ws_genes %>%
