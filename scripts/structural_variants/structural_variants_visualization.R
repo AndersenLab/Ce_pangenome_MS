@@ -248,7 +248,7 @@ merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_m
 # Outer ring of chromosomes (gene map of gene models represented with black rectangles)
 ## Chromosome IDs and sizes (start is always equal to zero)
 chr_order <- c("I","II","III","IV","V","X")
-chrom_sizes <- readr::read_tsv("../../processed_data/genome_resources/genome_data/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
+chrom_sizes <- readr::read_tsv("../../data/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
   dplyr::mutate(chrom = factor(chrom, levels = chr_order)) %>%
   dplyr::mutate(chrom = as.character(chrom))
 

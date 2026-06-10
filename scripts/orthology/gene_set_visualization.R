@@ -42,13 +42,13 @@ ortho_genes_dd <- readr::read_tsv("../../processed_data/orthology/orthofinder/or
   dplyr::filter(!grepl("MTCE",c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.protein))
 
 strainCol <- colnames(ortho_genes_dd)
-ugh <- gsub(".20251012.inbred.blobFiltered.softMasked.braker.longestIso.protein","", strainCol)
-ugh2 <- gsub(".20251014.inbred.blobFiltered.softMasked.braker.longestIso.protein","", ugh)
-ugh3 <- gsub(".20251124.inbred.blobFiltered.softMasked.braker.longestIso.protein","", ugh2)
-ugh4 <- gsub(".20251012.inbred.onlyONT.blobFiltered.softMasked.braker.longestIso.protein","", ugh3)
-ugh5 <- gsub(".Nov2025.softMasked.braker.longest.protein","", ugh4)
-ugh6 <- gsub(".20251012.inbred.withONT.blobFiltered.softMasked.braker.longestIso.protein","", ugh5)
-strainCol_c2 <- gsub("c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.protein","N2", ugh6)
+name <- gsub(".20251012.inbred.blobFiltered.softMasked.braker.longestIso.protein","", strainCol)
+name1 <- gsub(".20251014.inbred.blobFiltered.softMasked.braker.longestIso.protein","", name)
+name2 <- gsub(".20251124.inbred.blobFiltered.softMasked.braker.longestIso.protein","", name1)
+name3 <- gsub(".20251012.inbred.onlyONT.blobFiltered.softMasked.braker.longestIso.protein","", name2)
+name4 <- gsub(".Nov2025.softMasked.braker.longest.protein","", name3)
+name5 <- gsub(".20251012.inbred.withONT.blobFiltered.softMasked.braker.longestIso.protein","", name4)
+strainCol_c2 <- gsub("c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.protein","N2", name5)
 colnames(ortho_genes_dd) <- strainCol_c2
 
 ortho_count <- ortho_genes_dd
@@ -94,7 +94,7 @@ all_relations <- all_relations_pre %>%
 og_count_table <- all_relations %>% dplyr::rename_with(~ gsub("_count", "", .), contains("_count"))
 all_OGs <- ortho_genes_dd %>% dplyr::bind_rows(private_OGs)
 
-write.table(og_count_table, "../../processed_data/orthology/orthofinder/OG_relations_matrix_count.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
+write.table(og_count_table, "../../processed_data/orthology/OG_relations_matrix_count.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
 
 write.table(all_OGs, "../../tables/all_OGs_matrix.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
 
@@ -206,7 +206,83 @@ HIST <- ggdraw() +
             height = 0.5)  # height of inset (0-1)
 
 
+#### Visualization of how many genes contribute to each gene set for every strain
+table <- all_relations %>%
+  dplyr::left_join(classification_genes %>% dplyr::select(Orthogroup, class), by = "Orthogroup") %>%
+  dplyr::select(-Orthogroup)
 
+colnames(table) <- gsub("_count", "", colnames(table))
+
+count_cols <- colnames(table)[1:(ncol(table) - 1)] 
+
+results_list <- list()
+
+# Counting the number of genes contributing to each gene set for each strain
+for (col_name in count_cols) {
+  temp <- table %>%
+    dplyr::select(dplyr::all_of(col_name), class) %>%
+    dplyr::group_by(class) %>%
+    dplyr::summarise(n_genes = sum(!!sym(col_name), na.rm = TRUE)) %>%
+    dplyr::ungroup() %>%
+    tidyr::pivot_wider(names_from = class, values_from = n_genes)
+  
+  # Add column to identify source column
+  temp <- temp %>%
+    dplyr::mutate(strain = col_name) %>%
+    dplyr::select(strain, core, accessory, private)  
+  
+  results_list[[col_name]] <- temp
+}
+
+final_df <- bind_rows(results_list)
+
+df_long <- final_df %>%
+  tidyr::pivot_longer(cols = c(core, accessory, private), names_to = "class", values_to = "n_genes") %>%
+  dplyr::mutate(class = factor(class, levels = c("private", "accessory", "core")), strain = factor(strain, levels = rev(unique(strain))))
+
+N2_gene_count <- df_long %>% dplyr::filter(strain == "N2")
+
+# average number of genes contributing to each gene set among all strains
+stats <- df_long %>%
+  dplyr::group_by(class) %>%
+  dplyr::summarise(meann = mean(n_genes))
+
+df_percent <- final_df %>%
+  dplyr::mutate(total = core + accessory + private) %>%
+  dplyr::mutate(core = 100 * core / total, accessory = 100 * accessory / total, private = 100 * private / total) %>%
+  dplyr::select(-total) %>%
+  tidyr::pivot_longer(cols = c(core, accessory, private), names_to = "class", values_to = "percent")
+
+strain_order <- df_percent %>%
+  dplyr::filter(class == "core") %>%
+  dplyr::arrange(percent) %>%
+  dplyr::pull(strain)
+
+df_percent <- df_percent %>%
+  dplyr::mutate(class = factor(class, levels = c("private", "accessory", "core")), strain = factor(strain, levels = strain_order))
+
+# Create horizontal proportion plot!
+contrib <- ggplot(df_percent, aes(x = percent, y = strain, fill = class)) +
+  scale_fill_manual(values = c(
+    core = "green4",
+    accessory = "#DB6333",
+    private = "magenta3"
+  )) +
+  geom_bar(stat = "identity", alpha = 0.5, color = "black", linewidth = 0.2) +
+  labs(x = "Percent of genes", fill = "Gene set") +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme(
+    axis.text.y = element_text(size = 4.5, color = 'black'),
+    axis.title.y = element_blank(),
+    axis.text.x = element_text(size = 10, color = 'black'),
+    axis.title.x = element_text(size = 11, color = 'black'),
+    panel.background = element_blank(),
+    legend.text = element_text(color = 'black', size = 10),
+    legend.title = element_text(color = 'black', size = 10),
+    panel.border = element_rect(color = 'black', fill = NA)
+  )
+
+# ggsave("../../figures/supplementary/genes_to_gene_set_contribution.png", contrib, width = 7.5, height = 8.5, dpi = 600)
 
 ####################################################################################################
 ####################################################################################################
