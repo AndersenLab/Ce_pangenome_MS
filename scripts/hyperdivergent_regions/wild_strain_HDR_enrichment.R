@@ -417,3 +417,211 @@ plot_IPR_all_diff
 
 write.table(diff, "../../tables/enriched_IPR_inHDRs.tsv", row.names = F, col.names = T, sep = "\t")
 
+
+
+
+
+##########################################################################################
+### Look at rarefaction of enriched gene families ###
+##########################################################################################
+pan_ipr_cleaned <-readr::read_tsv("../../processed_data/genome_resources/annotation/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>% 
+  tidyr::separate(tran, into = c("strain","gene"), sep = "_") %>% 
+  dplyr::filter(IPR_description != "-") %>% 
+  dplyr::select(strain,gene,IPR_description)
+
+pan_gpcrs <- pan_ipr_cleaned %>% 
+  dplyr::filter(grepl("7TM", IPR_description)) %>%
+  dplyr::distinct(strain,gene) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(n_gpcrs = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(desc(n_gpcrs)) 
+
+
+cleaned_pan_gpcrs <- pan_gpcrs %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_gpcrs) %>% dplyr::filter(strain != "N2", strain != "CGC1")
+# write.table(cleaned_pan_gpcrs,"../../processed_data/processed_data/genome_resources/annotation/140_wild_strains_IPR_gpcrs.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
+
+all_relations <- readr::read_tsv("../../processed_data/orthology/OG_relations_matrix_count.tsv")
+
+private_freq <- 1/142
+
+priv <- all_relations %>%
+  dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>%
+  dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
+  dplyr::mutate(freq = (sum / 142)) %>%
+  dplyr::mutate(
+    class = case_when(
+      freq == 1 ~ "core",
+      freq > private_freq & freq < 1 ~ "accessory",
+      freq == private_freq ~ "private",
+      TRUE ~ "undefined"
+    )
+  ) %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::filter(class == "private") %>%
+  dplyr::pull(Orthogroup)
+
+
+all_OGs <- readr::read_tsv("../../tables/all_OGs_matrix.tsv")
+
+priv_expanded <- all_OGs %>% dplyr::filter(Orthogroup %in% priv) %>% tidyr::separate_rows(everything(), sep = ', ') 
+
+priv_wide <- priv_expanded %>% tidyr::pivot_longer(cols = -Orthogroup, names_to = "strain", values_to = "gene") %>% dplyr::filter(!is.na(gene)) %>% dplyr::select(-Orthogroup)
+
+merged <- priv_wide %>% dplyr::left_join(pan_gpcrs, by = "strain") %>% dplyr::mutate(priv_gpcrs = ifelse(gene.x == gene.y, T, F)) 
+
+priv_gpcrs <- merged %>% dplyr::filter(priv_gpcrs == T) %>% dplyr::group_by(strain) %>% dplyr::mutate(number_priv_gpcrs = n()) %>% dplyr::ungroup() %>% dplyr::arrange(desc(number_priv_gpcrs))
+
+rarefact <- priv_gpcrs %>% dplyr::select(strain,number_priv_gpcrs) %>% dplyr::distinct() %>%
+  dplyr::mutate(iterative_sum = cumsum(number_priv_gpcrs)) %>%
+  dplyr::mutate(number_genomes = row_number()) %>%
+  dplyr::mutate(number_genomes = factor(number_genomes, levels = number_genomes))
+
+
+#################### Looking at F-box genes ##############################################################################################################################
+pan_fbox <- pan_ipr_cleaned %>% 
+  dplyr::filter(grepl("F-box", IPR_description)) %>%
+  dplyr::distinct(strain,gene) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(n_fbox = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(desc(n_fbox)) 
+
+
+cleaned_pan_fbox <- pan_fbox %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_fbox) %>% dplyr::filter(strain != "N2", strain != "CGC1")
+# write.table(cleaned_pan_fbox,"../../processed_data/processed_data/genome_resources/annotation/140_wild_strains_IPR_fBox.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
+
+
+# rarefaction
+merged_fbox <- priv_wide %>% dplyr::left_join(pan_fbox, by = "strain") %>% dplyr::mutate(priv_fbox = ifelse(gene.x == gene.y, T, F)) 
+
+private_fbox <- merged_fbox %>% dplyr::filter(priv_fbox == T) %>% dplyr::group_by(strain) %>% dplyr::mutate(number_priv_fbox = n()) %>% dplyr::ungroup() %>% dplyr::arrange(desc(number_priv_fbox))
+
+rarefact_fbox <- private_fbox %>% dplyr::select(strain,number_priv_fbox) %>% dplyr::distinct() %>%
+  dplyr::mutate(iterative_sum = cumsum(number_priv_fbox)) %>%
+  dplyr::mutate(number_genomes = row_number()) %>%
+  dplyr::mutate(number_genomes = factor(number_genomes, levels = number_genomes))
+
+
+
+#################### Looking at C-type lectin genes ##############################################################################################################################
+pan_lectin <- pan_ipr_cleaned %>% 
+  dplyr::filter(grepl("C-type lectin", IPR_description)) %>%
+  dplyr::distinct(strain,gene) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(n_lectin = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(desc(n_lectin)) 
+
+
+cleaned_pan_lectin <- pan_lectin %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_lectin) %>% dplyr::filter(strain != "N2", strain != "CGC1")
+# write.table(cleaned_pan_lectin,"../../processed_data/processed_data/genome_resources/annotation/140_wild_strains_IPR_CtypeLectins.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
+
+
+# rarefaction
+merged_lectin <- priv_wide %>% dplyr::left_join(pan_lectin, by = "strain") %>% dplyr::mutate(priv_lectin = ifelse(gene.x == gene.y, T, F)) 
+
+private_lectin <- merged_lectin %>% dplyr::filter(priv_lectin == T) %>% dplyr::group_by(strain) %>% dplyr::mutate(number_priv_lectin = n()) %>% dplyr::ungroup() %>% dplyr::arrange(desc(number_priv_lectin))
+
+rarefact_lectin <- private_lectin %>% dplyr::select(strain,number_priv_lectin) %>% dplyr::distinct() %>%
+  dplyr::mutate(iterative_sum = cumsum(number_priv_lectin)) %>%
+  dplyr::mutate(number_genomes = row_number()) %>%
+  dplyr::mutate(number_genomes = factor(number_genomes, levels = number_genomes))
+
+
+
+
+
+#################### Looking at Cytochrome P450 genes ##############################################################################################################################
+pan_cyto <- pan_ipr_cleaned %>% 
+  dplyr::filter(grepl("Cytochrome P450", IPR_description)) %>% 
+  dplyr::distinct(strain,gene) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(n_cyto = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(desc(n_cyto)) 
+
+
+cleaned_pan_cyto <- pan_cyto %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_cyto) %>% dplyr::filter(strain != "N2", strain != "CGC1")
+# write.table(cleaned_pan_cyto,"../../processed_data/processed_data/genome_resources/annotation/140_wild_strains_IPR_cytochromeP450.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
+
+
+# rarefaction
+merged_cyto <- priv_wide %>% dplyr::left_join(pan_cyto, by = "strain") %>% dplyr::mutate(priv_cyto = ifelse(gene.x == gene.y, T, F)) 
+
+private_cyto <- merged_cyto %>% dplyr::filter(priv_cyto == T) %>% dplyr::group_by(strain) %>% dplyr::mutate(number_priv_cyto = n()) %>% dplyr::ungroup() %>% dplyr::arrange(desc(number_priv_cyto))
+
+rarefact_cyto <- private_cyto %>% dplyr::select(strain, number_priv_cyto) %>% dplyr::distinct() %>%
+  dplyr::mutate(iterative_sum = cumsum(number_priv_cyto)) %>%
+  dplyr::mutate(number_genomes = row_number()) %>%
+  dplyr::mutate(number_genomes = factor(number_genomes, levels = number_genomes))
+
+
+
+#################### Looking at nuclear hormone receptors ##############################################################################################################################
+pan_nhr <- pan_ipr_cleaned %>% 
+  dplyr::filter(grepl("uclear hormone receptor", IPR_description)) %>%
+  dplyr::distinct(strain,gene) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(n_nhr = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::arrange(desc(n_nhr)) 
+
+
+cleaned_pan_nhr <- pan_nhr %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_nhr) %>% dplyr::filter(strain != "N2", strain != "CGC1")
+# write.table(cleaned_pan_lectin,"../../processed_data/processed_data/genome_resources/annotation/140_wild_strains_IPR_nhr.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
+
+
+# rarefaction
+merged_nhr <- priv_wide %>% dplyr::left_join(pan_nhr, by = "strain") %>% dplyr::mutate(priv_nhr = ifelse(gene.x == gene.y, T, F)) 
+
+private_nhr <- merged_nhr %>% dplyr::filter(priv_nhr == T) %>% dplyr::group_by(strain) %>% dplyr::mutate(number_priv_nhr = n()) %>% dplyr::ungroup() %>% dplyr::arrange(desc(number_priv_nhr))
+
+rarefact_nhr <- private_nhr %>% dplyr::select(strain,number_priv_nhr) %>% dplyr::distinct() %>%
+  dplyr::mutate(iterative_sum = cumsum(number_priv_nhr)) %>%
+  dplyr::mutate(number_genomes = row_number()) %>%
+  dplyr::mutate(number_genomes = factor(number_genomes, levels = number_genomes))
+
+
+
+# Prepping data for rarefaction plotting
+rarefact_extended_gp <- rarefact %>% dplyr::bind_rows(tibble(strain = paste0("genome_", (max(as.numeric(.$number_genomes)) + 1):142),
+                                                             number_priv_gpcrs = 0, iterative_sum = max(.$iterative_sum), number_genomes = factor((max(as.numeric(.$number_genomes)) + 1):142)))
+rarefact_extended_fbox <- rarefact_fbox %>% dplyr::bind_rows(tibble(strain = paste0("genome_", (max(as.numeric(.$number_genomes)) + 1):142),
+                                                                    number_priv_gpcrs = 0, iterative_sum = max(.$iterative_sum), number_genomes = factor((max(as.numeric(.$number_genomes)) + 1):142)))
+rarefact_extended_lectin <- rarefact_lectin %>% dplyr::bind_rows(tibble(strain = paste0("genome_", (max(as.numeric(.$number_genomes)) + 1):142),
+                                                                        number_priv_gpcrs = 0, iterative_sum = max(.$iterative_sum), number_genomes = factor((max(as.numeric(.$number_genomes)) + 1):142)))
+rarefact_extended_cyto <- rarefact_cyto %>% dplyr::bind_rows(tibble(strain = paste0("genome_", (max(as.numeric(.$number_genomes)) + 1):142),
+                                                                    number_priv_gpcrs = 0, iterative_sum = max(.$iterative_sum), number_genomes = factor((max(as.numeric(.$number_genomes)) + 1):142)))
+rarefact_extended_nhr <- rarefact_nhr %>% dplyr::bind_rows(tibble(strain = paste0("genome_", (max(as.numeric(.$number_genomes)) + 1):142),
+                                                                  number_priv_gpcrs = 0, iterative_sum = max(.$iterative_sum), number_genomes = factor((max(as.numeric(.$number_genomes)) + 1):142)))
+
+
+# Rarefaction of all three gene families
+rarefaction_gene_families <- ggplot() +
+  geom_point(data = rarefact_extended_gp, aes(x = number_genomes, y = iterative_sum, color = "GPCRs"), size = 1) +
+  geom_point(data = rarefact_extended_fbox, aes(x = number_genomes, y = iterative_sum, color = "F-box"), size = 1) +
+  geom_point(data = rarefact_extended_lectin, aes(x = number_genomes, y = iterative_sum, color = "C-type lectins"), size = 1) +
+  geom_point(data = rarefact_extended_cyto, aes(x = number_genomes, y = iterative_sum, color = "Cytochrome P450s"), size = 1) + # these are enriched in core
+  geom_point(data = rarefact_extended_nhr, aes(x = number_genomes, y = iterative_sum, color = "Nuclear hormone receptors"), size = 1) + # these are enriched in core 
+  scale_color_manual(values = c("GPCRs" = "olivedrab", "F-box" = "firebrick", 
+                                "C-type lectins" = "steelblue", "Cytochrome P450s" = "orange", "Nuclear hormone receptors" = "violet")) +
+  theme(
+    panel.background = element_blank(),
+    legend.title = element_blank(),
+    legend.box.background = element_rect(color = 'black', fill = NA),
+    legend.position = "inside",
+    legend.position.inside = c(0.8,0.4),
+    legend.text = element_text(size = 11, color = 'black'),
+    panel.border = element_rect(fill = NA, color = "black"),
+    plot.margin = margin(l = 5, r = 10, t = 5, b = 5),
+    axis.title = element_text(size = 11),
+    axis.text = element_text(size =10, color = 'black'),
+    axis.text.x = element_text(size = 10, color = 'black')) +
+  scale_x_discrete(breaks = c(seq(0, 125, 25), 142)) +
+  labs(y = "Number of private genes", x = "Number of genomes")
+rarefaction_gene_families
+
+# Save rarefaction plot
+# ggsave("../../figures/supplementary/gene_family_rarefaction.png",rarefaction_gene_families, width = 7.5, height = 6, dpi = 600)
+
