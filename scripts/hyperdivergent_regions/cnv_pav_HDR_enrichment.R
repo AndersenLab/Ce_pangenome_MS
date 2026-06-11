@@ -78,103 +78,12 @@ OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_c
 # Preparing data:
 ws_hdr_ogs <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/hdr_genes_OG_class.tsv")
 strains <- ws_hdr_ogs %>% dplyr::distinct(strain) %>% dplyr::pull()
-all_relations <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/OG_relations_matrix_count.tsv") %>%
-  dplyr::rename_with(~ sub("_count$", "", .x))
-sc_ogs <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/orthofinder/64_core/OrthoFinder/Results_Dec07/Orthogroups/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>%
+all_relations <- readr::read_tsv("../../processed_data/orthology/OG_relations_matrix_count.tsv")
+sc_ogs <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>%
   dplyr::pull(OGs)
 
 # Running orthogroup enrichment
 og_enrich_results <- OG_enrichment(ws_hdr_ogs, strains, all_relations, sc_ogs)
-
-### Diagnostic plots
-# # non-normalized results plotted
-# plot_df <- og_enrich_results %>%
-#   tidyr::pivot_longer(
-#     cols = -strain,
-#     names_to = "metric",
-#     values_to = "value") %>%
-#   dplyr::mutate(region = case_when(
-#       stringr::str_detect(metric, "nonHDR") ~ "non-HDR",
-#       stringr::str_detect(metric, "HDR") ~ "HDR",
-#       TRUE ~ NA)) %>%
-#   dplyr::filter(!is.na(region)) %>%
-#   dplyr::mutate(region = factor(region, levels = c("HDR", "non-HDR")),
-#                 metric = ifelse(metric == "HDR_OG_count", "OG_count", 
-#                                 ifelse(metric == "nonHDR_OG_count", "OG_count", metric)),
-#                 stat = metric %>%
-#                   stringr::str_remove("_inHDRs?$") %>%
-#                   stringr::str_remove("_nonHDRs?$"),
-#                 stat = ifelse(stat == "one_to_one","one-to-one", 
-#                               ifelse(stat == "single_copy_OGs", "single-copy OGs",
-#                                      ifelse(stat == "OG_count", "OGs", stat))),
-#                 stat = factor(stat, levels = c("CNV","PAV","one-to-one","single-copy OGs","OGs")))
-# 
-# ggplot(plot_df, aes(x = stat, y = value, fill = region)) +
-#   geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-#   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
-#   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-#   theme_bw() +
-#   theme(
-#     axis.title.x = element_blank(),
-#     axis.text.x = element_text(size = 22, color = 'black', face = 'bold'),
-#     panel.grid.major.x = element_blank(),
-#     legend.title = element_blank(),
-#     legend.text = element_text(size = 20, color = 'black'),
-#     axis.text.y = element_text(size = 18, color = 'black'),
-#     axis.title.y = element_text(size = 22, color = 'black', face = 'bold')
-#   ) +
-#   scale_y_log10() +
-#   labs(y = "Orthogroup count", fill = "Region")
-# 
-# 
-# # normalizing for # of orthogroups in HDRs versus not in HDRs
-# plot_df_norm <- og_enrich_results %>%
-#   dplyr::rename(inHDR_OG_count = HDR_OG_count) %>%
-#   dplyr::mutate(
-#     dplyr::across(dplyr::matches("inHDR"), ~ .x / inHDR_OG_count),
-#     dplyr::across(dplyr::matches("nonHDR"), ~ .x / nonHDR_OG_count)) %>%
-#   tidyr::pivot_longer(
-#     cols = -strain,
-#     names_to = "metric",
-#     values_to = "value") %>%
-#   dplyr::mutate(region = case_when(
-#     stringr::str_detect(metric, "nonHDR") ~ "non-HDR",
-#     stringr::str_detect(metric, "HDR") ~ "HDR",
-#     TRUE ~ NA)) %>%
-#   dplyr::filter(!is.na(region)) %>%
-#   dplyr::mutate(region = factor(region, levels = c("HDR", "non-HDR")),
-#                 metric = ifelse(metric == "inHDR_OG_count", "OG_count", 
-#                                 ifelse(metric == "nonHDR_OG_count", "OG_count", metric)),
-#                 stat = metric %>%
-#                   stringr::str_remove("_inHDRs?$") %>%
-#                   stringr::str_remove("_nonHDRs?$"),
-#                 stat = ifelse(stat == "one_to_one","n-to-n", 
-#                               ifelse(stat == "single_copy_OGs", "single-copy OGs",
-#                                      ifelse(stat == "OG_count", "OGs", stat))),
-#                 stat = factor(stat, levels = c("CNV","PAV","n-to-n","single-copy OGs","OGs"))) %>%
-#   dplyr::filter(stat != "OGs")
-# 
-# 
-# ggplot(plot_df_norm, aes(x = stat, y = value, fill = region)) +
-#   geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-#   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
-#   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-#   theme_bw() +
-#   theme(
-#     axis.title.x = element_blank(),
-#     axis.text.x = element_text(size = 26, color = 'black', face = 'bold'),
-#     panel.grid.major.x = element_blank(),
-#     legend.box.background = element_rect(color = "black", size = 1),
-#     legend.position  = 'inside',
-#     legend.position.inside = c(0.945,0.945),
-#     legend.title = element_blank(),
-#     legend.key.size = unit(1.5, "cm"),
-#     legend.text = element_text(size = 24, color = 'black'),
-#     axis.text.y = element_text(size = 18, color = 'black'),
-#     axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
-#   ) +
-#   scale_y_log10() +
-#   labs(y = "Orthogroup count", fill = "Region")
 
 
 #### Calculating stats and adding to plot: 
@@ -220,129 +129,49 @@ wilcox_results <- wilcox_results %>%
   dplyr::left_join(y_pos, by = "stat")
 
 all_plt <- ggplot(plot_df_norm, aes(x = stat, y = value, fill = region)) +
-  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
+  geom_boxplot(width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.75), size = 0.3) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(wilcox_results, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  scale_y_log10() +
-  labs(y = "Proportion of orthogroups", fill = "Region", title = "ALL ORTHOGROUPS") +
+  stat_pvalue_manual(wilcox_results, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 4) +
+  # scale_y_log10() +
+  labs(y = "Proportion of orthogroups", fill = "Region") +
   theme_bw() +
   theme(
     axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 26, color = 'black'),
+    axis.text.x = element_text(size = 11, color = 'black'),
     panel.grid.major.x = element_blank(),
     legend.box.background = element_rect(color = "black", linewidth = 1),
     legend.position  = 'inside',
     panel.border = element_rect(color = 'black', fill =NA),
-    legend.position.inside = c(0.95, 0.945),
+    legend.position.inside = c(0.12, 0.85),
     legend.title = element_blank(),
     legend.key.size = unit(1.5, "cm"),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
-    legend.text = element_text(size = 24, color = 'black'),
-    axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
+    legend.text = element_text(size = 10, color = 'black'),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.title.y = element_text(size = 11, color = 'black')
   )  +
-  # scale_x_discrete(labels = c(
-  #   "CNV" = "CNV",
-  #   "PAV" = "PAV",
-  #   "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
-  #   "single-copy OGs" = "single-copy OGs"
-  # ))
   scale_x_discrete(labels = c(
-  "CNV" = expression(bold("CNV")),
-  "PAV" = expression(bold("PAV")),
-  "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))),
-  "single-copy OGs" = expression(bold("single-copy OGs"))
-  ))
+  "CNV" = expression("CNV"),
+  "PAV" = expression("PAV"),
+  "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+  "single-copy OGs" = expression("single-copy orthogroups")))
 all_plt
 
+# Save the plot
+# ggsave("../../figures/supplementary/cnv_pav_allGenes.png", width = 7.5, height = 5.5, dpi = 600)
 
-
-all_plt_noscOG <- ggplot(plot_df_norm %>% dplyr::filter(stat != "single-copy OGs"), aes(x = stat, y = value, fill = region)) +
-  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
-  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(wilcox_results %>% dplyr::filter(stat != "single-copy OGs"), label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  # scale_y_log10() +
-  labs(y = "Proportion of orthogroups", fill = "Region") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 28, color = 'black'),
-    # panel.grid.major.x = element_blank(),
-    panel.grid = element_blank(),
-    legend.box.background = element_rect(color = "black", linewidth = 1),
-    legend.position  = 'inside',
-    panel.border = element_rect(color = 'black', fill =NA),
-    legend.position.inside = c(0.9, 0.1),
-    legend.title = element_blank(),
-    legend.key.size = unit(1.5, "cm"),
-    # plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
-    legend.text = element_text(size = 24, color = 'black'),
-    axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 32, color = 'black', face = 'bold')
-  )  +
-  # scale_x_discrete(labels = c(
-  #   "CNV" = "CNV",
-  #   "PAV" = "PAV",
-  #   "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
-  #   "single-copy OGs" = "single-copy OGs"
-  # ))
-  scale_x_discrete(labels = c(
-    "CNV" = expression(bold("copy-number variant (CNV)")),
-    "PAV" = expression(bold("presence-absence variant (PAV)")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))))) +
-  coord_cartesian(ylim = c(-0.0001, 1.0001)) 
-all_plt_noscOG
-
-cnv_inset <- ggplot(plot_df_norm %>% dplyr::filter(stat != "single-copy OGs"), aes(x = stat, y = value, fill = region)) +
-  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
-  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(wilcox_results %>% dplyr::filter(stat != "single-copy OGs"), label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  # scale_y_log10() +
-  labs(y = "Proportion of orthogroups", fill = "Region") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 28, color = 'black'),
-    # panel.grid.major.x = element_blank(),
-    panel.grid = element_blank(),
-    legend.box.background = element_rect(color = "black", linewidth = 1),
-    legend.position  = 'inside',
-    panel.border = element_rect(color = 'black', fill =NA),
-    legend.position.inside = c(0.9, 0.1),
-    legend.title = element_blank(),
-    legend.key.size = unit(1.5, "cm"),
-    # plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
-    legend.text = element_text(size = 24, color = 'black'),
-    axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 32, color = 'black', face = 'bold')
-  )  +
-  # scale_x_discrete(labels = c(
-  #   "CNV" = "CNV",
-  #   "PAV" = "PAV",
-  #   "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
-  #   "single-copy OGs" = "single-copy OGs"
-  # ))
-  scale_x_discrete(labels = c(
-    "CNV" = expression(bold("copy-number variant (CNV)")),
-    "PAV" = expression(bold("presence-absence variant (PAV)")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))))) +
-  coord_cartesian(ylim = c(-0.0001, 0.1)) 
-cnv_inset
 
 
 
 #####################################################################################################
 # Adding on gene-class specific variation
 #####################################################################################################
-### GPCRs #########################################
-ws_gpcrs <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/140_IPR_gpcrs.tsv") %>% dplyr::mutate(gpcr = TRUE) # see line 1664 in orthogroup_vis.R
+############################################### GPCRs #####################################################################################
+ws_gpcrs <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_gpcrs.tsv") %>% dplyr::mutate(gpcr = TRUE) 
 
 gpcr_ws_hdr_ogs <- ws_hdr_ogs %>% dplyr::left_join(ws_gpcrs, by = c("strain","gene")) %>% dplyr::filter(gpcr == TRUE)
 
-all_ws_genes_class_og <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/all_genes_class_OGs.tsv")
+all_ws_genes_class_og <- readr::read_tsv("../../processed_data/orthology/all_genes_class_OGs.tsv")
 
 all_ws_gpcr_OGs <- all_ws_genes_class_og %>% dplyr::left_join(ws_gpcrs, by = c("strain","gene")) %>% dplyr::filter(gpcr == TRUE) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
 
@@ -400,7 +229,6 @@ gpcrs_plt <- ggplot(plot_df_norm_gpcrs, aes(x = stat, y = value, fill = region))
   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
   stat_pvalue_manual(wilcox_results_gp, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  scale_y_log10() +
   labs(y = "Proportion of orthogroups", fill = "Region", title = "GPCRs") +
   theme_bw() +
   theme(
@@ -410,19 +238,19 @@ gpcrs_plt <- ggplot(plot_df_norm_gpcrs, aes(x = stat, y = value, fill = region))
     legend.box.background = element_rect(color = "black", size = 1),
     legend.position  = 'inside',
     panel.border = element_rect(color = 'black', fill = NA),
-    legend.position.inside = c(0.945, 0.945),
+    legend.position.inside = c(0.1, 0.9),
     legend.title = element_blank(),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
+    plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 24, color = 'black'),
     axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
+    axis.title.y = element_text(size = 26, color = 'black')
   )  +
   scale_x_discrete(labels = c(
-    "CNV" = expression(bold("CNV")),
-    "PAV" = expression(bold("PAV")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))),
-    "single-copy OGs" = expression(bold("single-copy OGs"))
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
+    "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+    "single-copy OGs" = expression("single-copy OGs")
   )) 
 gpcrs_plt
 
@@ -434,8 +262,8 @@ gpcrs_plt
 
 
 
-### F-box genes ############################################
-ws_fbox <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/140_IPR_fBox.tsv") %>% dplyr::mutate(fbox = TRUE) # see line 1664 in orthogroup_vis.R
+############################################### F-box genes ########################################################################################
+ws_fbox <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_fBox.tsv") %>% dplyr::mutate(fbox = TRUE) 
 
 fbox_ws_hdr_ogs <- ws_hdr_ogs %>% dplyr::left_join(ws_fbox, by = c("strain","gene")) %>% dplyr::filter(fbox == TRUE)
 
@@ -495,7 +323,6 @@ fbox_plt <- ggplot(plot_df_norm_fbox, aes(x = stat, y = value, fill = region)) +
   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
   stat_pvalue_manual(wilcox_results_final, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  scale_y_log10() +
   labs(y = "Proportional orthogroup count", fill = "Region", title = "F-box") +
   theme_bw() +
   theme(
@@ -505,19 +332,19 @@ fbox_plt <- ggplot(plot_df_norm_fbox, aes(x = stat, y = value, fill = region)) +
     legend.box.background = element_rect(color = "black", size = 1),
     legend.position  = 'inside',
     panel.border = element_rect(color = 'black', fill = NA),
-    legend.position.inside = c(0.945, 0.945),
+    legend.position.inside = c(0.1, 0.9),
     legend.title = element_blank(),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
+    plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 24, color = 'black'),
     axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
+    axis.title.y = element_text(size = 26, color = 'black')
   )  +
   scale_x_discrete(labels = c(
-    "CNV" = expression(bold("CNV")),
-    "PAV" = expression(bold("PAV")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))),
-    "single-copy OGs" = expression(bold("single-copy OGs"))
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
+    "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+    "single-copy OGs" = expression("single-copy OGs")
   )) 
 fbox_plt
 
@@ -533,8 +360,8 @@ fbox_plt
 
 
 
-### C-type lectins ############################################
-ws_lectin <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/140_IPR_CtypeLectins.tsv") %>% dplyr::mutate(lectin = TRUE) # see line 1664 in orthogroup_vis.R
+############################################### C-type lectins ########################################################################################
+ws_lectin <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_CtypeLectins.tsv") %>% dplyr::mutate(lectin = TRUE) 
 
 lectin_ws_hdr_ogs <- ws_hdr_ogs %>% dplyr::left_join(ws_lectin, by = c("strain","gene")) %>% dplyr::filter(lectin == TRUE)
 
@@ -594,7 +421,6 @@ lectins_plt <- ggplot(plot_df_norm_lectin, aes(x = stat, y = value, fill = regio
   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
   stat_pvalue_manual(wilcox_results_ct, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  scale_y_log10() +
   labs(y = "Proportional orthogroup count", fill = "Region", title = "C-type lectins") +
   theme_bw() +
   theme(
@@ -604,19 +430,19 @@ lectins_plt <- ggplot(plot_df_norm_lectin, aes(x = stat, y = value, fill = regio
     legend.box.background = element_rect(color = "black", size = 1),
     legend.position  = 'inside',
     panel.border = element_rect(color = 'black', fill = NA),
-    legend.position.inside = c(0.945, 0.945),
+    legend.position.inside = c(0.1, 0.9),
     legend.title = element_blank(),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
+    plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 24, color = 'black'),
     axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
+    axis.title.y = element_text(size = 26, color = 'black')
   )  +
   scale_x_discrete(labels = c(
-    "CNV" = expression(bold("CNV")),
-    "PAV" = expression(bold("PAV")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))),
-    "single-copy OGs" = expression(bold("single-copy OGs"))
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
+    "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+    "single-copy OGs" = expression("single-copy OGs")
   )) 
 lectins_plt
 
@@ -625,8 +451,8 @@ lectins_plt
 
 
 
-### Cytochrome P450s ############################################
-ws_cyto <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/ws_HDR_liftover/140_IPR_cytochromeP450.tsv") %>% dplyr::mutate(cyto = TRUE) # see line 1664 in orthogroup_vis.R
+############################################### Cytochrome P450s ########################################################################################
+ws_cyto <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_cytochromeP450.tsv") %>% dplyr::mutate(cyto = TRUE) 
 
 cyto_ws_hdr_ogs <- ws_hdr_ogs %>% dplyr::left_join(ws_cyto, by = c("strain","gene")) %>% dplyr::filter(cyto == TRUE)
 
@@ -686,31 +512,121 @@ cytos_plt <- ggplot(plot_df_norm_cyto, aes(x = stat, y = value, fill = region)) 
   geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
   stat_pvalue_manual(wilcox_results_ct, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  scale_y_log10() +
   labs(y = "Proportional orthogroup count", fill = "Region", title = "Cytochrome P450s") +
   theme_bw() +
   theme(
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 26, color = 'black'),
-    # panel.grid.major.x = element_blank(),
+    panel.grid.major.x = element_blank(),
     legend.box.background = element_rect(color = "black", size = 1),
     legend.position  = 'inside',
     panel.border = element_rect(color = 'black', fill = NA),
-    legend.position.inside = c(0.945, 0.945),
+    legend.position.inside = c(0.1, 0.9),
     legend.title = element_blank(),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
+    plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
     legend.key.size = unit(1.5, "cm"),
     legend.text = element_text(size = 24, color = 'black'),
     axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
+    axis.title.y = element_text(size = 26, color = 'black')
   )  +
   scale_x_discrete(labels = c(
-    "CNV" = expression(bold("CNV")),
-    "PAV" = expression(bold("PAV")),
-    "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))),
-    "single-copy OGs" = expression(bold("single-copy OGs"))
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
+    "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+    "single-copy OGs" = expression("single-copy OGs")
   )) 
 cytos_plt
+
+
+
+
+
+
+############################################### Nuclear hormone receptors ########################################################################################
+ws_nhr <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_nhr.tsv") %>% dplyr::mutate(nhr = TRUE) 
+
+nhr_ws_hdr_ogs <- ws_hdr_ogs %>% dplyr::left_join(ws_nhr, by = c("strain","gene")) %>% dplyr::filter(nhr == TRUE)
+
+all_ws_nhr_OGs <- all_ws_genes_class_og %>% dplyr::left_join(ws_nhr, by = c("strain","gene")) %>% dplyr::filter(nhr == TRUE) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
+
+nhr_all_relations <- all_relations %>% dplyr::filter(Orthogroup %in% all_ws_nhr_OGs)
+
+
+# Running orthogroup enrichment
+og_enrich_results_nhr <- OG_enrichment(nhr_ws_hdr_ogs, strains, nhr_all_relations, sc_ogs)
+
+
+#### Calculating stats and adding to plot: 
+# Paired Wilcoxon signed-rank test
+plot_df_norm_nhr <- og_enrich_results_nhr %>%
+  dplyr::rename(inHDR_OG_count = HDR_OG_count) %>%
+  dplyr::mutate(
+    dplyr::across(dplyr::matches("inHDR"), ~ .x / inHDR_OG_count),
+    dplyr::across(dplyr::matches("nonHDR"), ~ .x / nonHDR_OG_count)) %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::mutate(region = case_when(
+    stringr::str_detect(metric, "nonHDR") ~ "non-HDR",
+    stringr::str_detect(metric, "HDR") ~ "HDR",
+    TRUE ~ NA)) %>%
+  dplyr::filter(!is.na(region)) %>%
+  dplyr::mutate(region = factor(region, levels = c("HDR", "non-HDR")),
+                metric = ifelse(metric == "inHDR_OG_count", "OG_count",
+                                ifelse(metric == "nonHDR_OG_count", "OG_count", metric)),
+                stat = metric %>%
+                  stringr::str_remove("_inHDRs?$") %>%
+                  stringr::str_remove("_nonHDRs?$"),
+                stat = ifelse(stat == "one_to_one","n-to-n",
+                              ifelse(stat == "single_copy_OGs", "single-copy OGs",
+                                     ifelse(stat == "OG_count", "OGs", stat))),
+                stat = factor(stat, levels = c("CNV","PAV","n-to-n","single-copy OGs","OGs"))) %>%
+  dplyr::filter(stat != "OGs") %>%
+  dplyr::mutate(value = ifelse(value == 'NaN', 0, value))
+
+wilcox_results_nhr <- plot_df_norm_nhr  %>%
+  dplyr::group_by(stat) %>%
+  wilcox_test(value ~ region, paired = TRUE) %>%
+  adjust_pvalue(method = "BH") %>% # Benjamini-Hochberg correction
+  add_significance()
+
+y_pos_nhr <- plot_df_norm_nhr %>%
+  dplyr::group_by(stat) %>%
+  dplyr::summarise(y.position = max(value, na.rm = TRUE) * 1.03, .groups = "drop")
+
+wilcox_results_nhr <- wilcox_results_nhr %>%
+  dplyr::left_join(y_pos_nhr, by = "stat")
+
+nhrs_plt <- ggplot(plot_df_norm_nhr, aes(x = stat, y = value, fill = region)) +
+  geom_boxplot(width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.75), size = 1.25) +
+  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
+  stat_pvalue_manual(wilcox_results_ct, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
+  labs(y = "Proportional orthogroup count", fill = "Region", title = "Nuclear hormone receptors") +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_text(size = 26, color = 'black'),
+    panel.grid.major.x = element_blank(),
+    legend.box.background = element_rect(color = "black", size = 1),
+    legend.position  = 'inside',
+    panel.border = element_rect(color = 'black', fill = NA),
+    legend.position.inside = c(0.1, 0.9),
+    legend.title = element_blank(),
+    plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
+    legend.key.size = unit(1.5, "cm"),
+    legend.text = element_text(size = 24, color = 'black'),
+    axis.text.y = element_text(size = 18, color = 'black'),
+    axis.title.y = element_text(size = 26, color = 'black')
+  )  +
+  scale_x_discrete(labels = c(
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
+    "n-to-n" = expression(italic(n) * "-to-" * italic(n)),
+    "single-copy OGs" = expression("single-copy OGs")
+  )) 
+nhrs_plt
 
 
 
@@ -728,84 +644,179 @@ final_cnv_pav_geneclass <- plot_df_norm %>% dplyr::mutate(gene_class = "All gene
   dplyr::bind_rows(plot_df_norm_cyto %>% dplyr::mutate(gene_class = "Cytochrome P450s"),
                    plot_df_norm_fbox %>% dplyr::mutate(gene_class = "F-box genes"),
                    plot_df_norm_gpcrs %>% dplyr::mutate(gene_class = "GPCRs"),
-                   plot_df_norm_lectin %>% dplyr::mutate(gene_class = "C-type lectins")) %>%
+                   plot_df_norm_lectin %>% dplyr::mutate(gene_class = "C-type lectins"),
+                   plot_df_norm_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
-  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s")))
+  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
+  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))
 
 concatenated_stats <- wilcox_results %>% dplyr::mutate(gene_class = "All genes") %>% 
   dplyr::bind_rows(wilcox_results_cyto %>% dplyr::mutate(gene_class = "Cytochrome P450s"),
                    wilcox_results_final %>% dplyr::mutate(gene_class = "F-box genes"),
                    wilcox_results_gp %>% dplyr::mutate(gene_class = "GPCRs"),
-                   wilcox_results_ct %>% dplyr::mutate(gene_class = "C-type lectins")) %>%
+                   wilcox_results_ct %>% dplyr::mutate(gene_class = "C-type lectins"),
+                   wilcox_results_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
-  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s")))
-
-
-all_plt_class <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = region)) +
-  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 1.25) +
-  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(concatenated_stats, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 8) +
-  # scale_y_log10() +
-  facet_wrap(~gene_class, nrow = 1) +
-  labs(y = "Proportion of orthogroups", fill = "Region") +
-  theme_bw() +
-  theme(
-    axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 26, color = 'black'),
-    panel.grid = element_blank(),
-    legend.box.background = element_rect(color = "black", size = 1),
-    # legend.position  = 'inside',
-    panel.border = element_rect(color = 'black', fill = NA),
-    # legend.position.inside = c(0.945, 0.945),
-    legend.title = element_blank(),
-    strip.text = element_text(size = 26, color = 'black', face = 'bold'),
-    plot.title = element_text(size = 20, color = 'black', face = 'bold', hjust = 0.5),
-    legend.key.size = unit(1.5, "cm"),
-    legend.text = element_text(size = 24, color = 'black'),
-    axis.text.y = element_text(size = 18, color = 'black'),
-    axis.title.y = element_text(size = 26, color = 'black', face = 'bold')
-  )  +
-  scale_x_discrete(labels = c(
-      "CNV" = expression(bold("CNV")),
-      "PAV" = expression(bold("PAV")),
-      "n-to-n" = expression(bold(bolditalic(n) * "-to-" * bolditalic(n))))) 
-  # coord_cartesian(ylim = c(-0.0001, 1.0001))
-all_plt_class
+  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
+  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))
                      
 
 
-fig_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = region)) +
-  geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 0.01) +
+all_enr_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = region)) +
+  geom_boxplot(position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.75), size = 0.05) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(concatenated_stats, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 4) +
-  # scale_y_log10() +
+  stat_pvalue_manual(concatenated_stats, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 2) +
   facet_wrap(~gene_class, nrow = 1) +
-  labs(y = "Proportional orthogroup count", fill = "Region") +
+  labs(y = "Proportion of orthogroups", fill = NULL) +
   theme_bw() +
   theme(
     axis.title.x = element_blank(),
-    axis.text.x = element_text(size = 10, color = 'black'),
+    axis.text.x = element_text(size = 9, color = 'black'),
     panel.grid = element_blank(),
-    legend.box.background = element_rect(color = "black", size = 1),
-    legend.position  = 'none',
+    # legend.box.background = element_rect(color = "black", size = 1),
+    legend.position  = 'inside',
+    legend.position.inside = c(0.071,0.895),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 9.5, color = 'black'),
-    # plot.title = element_text(size = 20, color = 'black', hjust = 0.5),
-    legend.text = element_text(size = 10, color = 'black'),
-    axis.text.y = element_text(size = 10, color = 'black'),
-    axis.title.y = element_text(size = 10, color = 'black')
+    strip.text = element_text(size = 8, color = 'black'),
+    legend.text = element_text(size = 8, color = 'black'),
+    axis.text.y = element_text(size = 9, color = 'black'),
+    axis.title.y = element_text(size = 9, color = 'black')
   )  +
   scale_x_discrete(labels = c(
-    # "CNV" = expression(bold("CNV")),
-    # "PAV" = expression(bold("PAV")),
+    "CNV" = expression("CNV"),
+    "PAV" = expression("PAV"),
     "n-to-n" = expression(italic("n") * "-to-" * italic("n"))))
-# coord_cartesian(ylim = c(-0.0001, 1.0001))
-fig_plot
+all_enr_plot
 
 
-# ggsave("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/plots/cnv_pav_enrichmentPlot.png", fig_plot, dpi = 600, width = 7.5, height = 4)
+
+
+
+
+# Adding in panels a) and b)
+# rel_fract <- readr::read_tsv("../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv")
+# strain_order <- rel_fract %>%
+  # dplyr::filter(`Gene set` == "Private") %>%
+  # dplyr::arrange(desc(scaled_geneSet_props))%>%   # ascending: smallest -> largest
+  # dplyr::distinct(strain) %>%
+  # dplyr::pull(strain)
+
+ipr_enr <- readr::read_tsv("../../tables/enriched_IPR_inHDRs.tsv")
+
+# FRACT <- ggplot(data = rel_fract %>% dplyr::mutate(strain = factor(strain, levels = strain_order))) +
+#   geom_col(aes(x = strain, y = scaled_geneSet_props_HDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
+#   scale_fill_manual(values = c(
+#     "Core" = "green4",
+#     "Accessory" = "#DB6333",
+#     "Private" = "magenta3"
+#   )) +
+#   theme(
+#     axis.text.x = element_blank(),
+#     legend.position = 'none',
+#     axis.ticks.x = element_blank(),
+#     axis.title.x = element_blank(),
+#     axis.title.y = element_text(size = 11, color = 'black'),
+#     plot.margin = margin(l = 10, r = 10, t = 20, b = 20),
+#     axis.text.y = element_text(size = 10, color = 'black')
+#   ) +
+#   scale_y_continuous(expand = c(0,0)) +
+#   labs(y = "Relative fraction of gene set in HDRs")
+# FRACT
+  
+  
+ENR <- ggplot(ipr_enr) +
+  geom_vline(xintercept = -log10(0.05), color='blue', linewidth=0.4) +
+  geom_point(aes(x = n_genes_HDR, y = plotpoint, size = enrich_ratio, fill = -log10(FDR_p.adjust), shape = `Gene set`)) +
+  scale_y_continuous(breaks = ipr_enr$plotpoint, labels = ipr_enr$IPR_description, name = "", expand = c(0.02,0.02)) +
+  scale_shape_manual(values = c("Core" = 21, "Accessory" = 22, "Private" = 24)) +
+  scale_fill_gradient(low = "yellow", high = "red", breaks = c(round(min(-log10(ipr_enr$FDR_p.adjust))), 
+                                                               round((max(-log10(ipr_enr$FDR_p.adjust)) + min(-log10(ipr_enr$FDR_p.adjust))) / 2), 
+                                                               round(max(-log10(ipr_enr$FDR_p.adjust))))) +
+  scale_size_continuous(range = c(0.5, 3), name = "Fold enrichment", breaks = pretty(ipr_enr$enrich_ratio, n = 4)) +
+  coord_cartesian(xlim = c(0, 12000)) +
+  theme(axis.text.x = element_text(size=9, color='black'),
+        axis.text.y = element_text(size=6.5, color='black'),
+        axis.title = element_text(size=9, color='black'),
+        plot.title = element_blank(),
+        legend.title = element_text(size = 9, color='black', hjust = 1),
+        legend.text = element_text(size = 9, color='black', hjust = 1),
+        legend.position = "inside",
+        legend.position.inside = c(0.65, 0.4),
+        legend.direction = "horizontal", legend.box = "vertical",
+        legend.spacing.y = unit(0.0001, 'cm'),
+        legend.key.height = unit(0.01, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        legend.box.just = "right",
+        text = element_text(family="Helvetica"),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill = NA),
+        plot.margin = margin(b = 5, t = 5, r = 15, l = 25, unit = "pt")) +
+  guides(
+    fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 0.5),
+    size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
+    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 4))) +
+  labs(title = "Enriched IPR terms for wild strain genes in HDRs",  x = "Gene count", size = "Fold enrichment", fill = expression(-log[10]~"(corrected p-value)"))
+ENR
+
+
+  
+# top <- cowplot::plot_grid(
+#   FRACT,ENR,
+#   nrow = 1,
+#   labels = c("a","b"))
+# bottom <- cowplot::plot_grid(
+#   all_enr_plot,
+#   labels = "c"
+# )
+#   
+  
+# final_plt <- cowplot::plot_grid(
+#   top,
+#   bottom,
+#   rel_heights = c(1.1,1),
+#   nrow = 2)
+# final_plt
+
+final_plt <- cowplot::plot_grid(
+  ENR, all_enr_plot,
+  nrow = 2,
+  labels = c("a","b"))
+final_plt
+
+# Save figure
+ggsave("../../figures/wild_strain_HDRs_enrich_CNV_PAV.png", final_plt, dpi = 600, width = 7.5, height = 7.5)
+
+
+
+
+
+
+############################################################################################################################################ 
+############################ Looking at averages among all wild strains ############################ 
+############################################################################################################################################
+### Which gene family has the most single-copy orthologs in the HDRs in relation to all single-copy orthologs genome-wide for that gene family????
+# GPCRs 
+
+# F-box proteins
+
+# C-type lectins
+
+# cytochrome P450s
+
+# Nuclear hormone receptors
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -824,41 +835,72 @@ all_stats <- og_enrich_results_GPCRs %>% dplyr::mutate(type = "GPCRs") %>%
   dplyr::bind_rows((og_enrich_results_FBOX %>% dplyr::mutate(type = "FBOX"))) %>%
   dplyr::bind_rows((og_enrich_results_LECTIN %>% dplyr::mutate(type = "C_type_lectins"))) %>% 
   dplyr::bind_rows((og_enrich_results_cyto %>% dplyr::mutate(type = "Cytochrome_P450s"))) %>% 
+  dplyr::bind_rows((og_enrich_results_nhr %>% dplyr::mutate(type = "Nuclear_hormone_receptors"))) %>%
   dplyr::group_by(type) %>%
   dplyr::mutate(mean_CNV_inHDR = mean(CNV_inHDR),
                 mean_PAV_inHDR = mean(PAV_inHDR),
-                mean_HDR_ogCount = mean(HDR_OG_count),
-                mean_nonHDR_ogCount = mean(nonHDR_OG_count)) %>%
+                mean_n_to_n_inHDR  = mean(one_to_one_inHDR),
+                mean_n_to_n_nonHDR  = mean(one_to_one_nonHDR),
+                mean_HDR = mean(HDR_OG_count),
+                mean_nonHDR = mean(nonHDR_OG_count)) %>%
   dplyr::ungroup()
 
-plt_all_stats <- all_stats %>% dplyr::select(mean_CNV_inHDR, mean_PAV_inHDR, mean_HDR_ogCount, mean_nonHDR_ogCount, type) %>%
+plt_all_stats <- all_stats %>% dplyr::select(mean_CNV_inHDR, mean_PAV_inHDR, mean_n_to_n_inHDR, mean_n_to_n_nonHDR, mean_HDR, mean_nonHDR, type) %>%
   dplyr::distinct() %>%
   dplyr::mutate(across(-last_col(), round)) %>%
   tidyr::pivot_longer(
     cols = -type,
     names_to = "metric",
     values_to = "value") %>%
-  dplyr::mutate(metric = factor(metric, levels = c("mean_CNV_inHDR","mean_PAV_inHDR", "mean_HDR_ogCount","mean_nonHDR_ogCount")),
-                type = factor(type, levels = c("ALL","Cytochrome_P450s","C_type_lectins","FBOX","GPCRs")))
+  dplyr::mutate(metric = factor(metric, levels = c("mean_CNV_inHDR","mean_PAV_inHDR", "mean_n_to_n_inHDR", "mean_n_to_n_nonHDR", "mean_HDR","mean_nonHDR")),
+                type = factor(type, levels = c("ALL","Cytochrome_P450s","Nuclear_hormone_receptors", "C_type_lectins","FBOX","GPCRs")))
 
 
-ggplot(data = plt_all_stats) +
+# stats <- ggplot(data = plt_all_stats) +
+#   geom_col(aes(x = metric, y = value, fill = type), position = "dodge") +
+#   scale_fill_manual(values = c("ALL" = "black", "GPCRs" = "olivedrab", "FBOX" = "firebrick", "C_type_lectins" = "steelblue", "Nuclear_hormone_receptors" = "violet", "Cytochrome_P450s" = "orange")) +
+#   scale_y_log10(expand = expansion(mult = c(0,0.01))) +
+#   theme(
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     panel.background = element_blank(),
+#     legend.title = element_blank(),
+#     legend.text = element_text(size = 10, color = 'black'),
+#     legend.box.background = element_rect(color = 'black', fill = NA),
+#     legend.position = 'inside',
+#     legend.position.inside = c(0.2,0.7),
+#     axis.text.x = element_text(size = 10, color = 'black'),
+#     axis.title.x = element_blank(),
+#     axis.title.y = element_text(size = 10, color = 'black'),
+#     axis.text.y = element_text(size = 10, color = 'black')
+#   ) +
+#   labs(y = expression(Orthogroup~count~(log[10])))
+# stats
+
+stats <- ggplot(data = plt_all_stats %>% dplyr::filter(type != "ALL")) +
   geom_col(aes(x = metric, y = value, fill = type), position = "dodge") +
-  scale_fill_manual(values = c("ALL" = "black", "GPCRs" = "olivedrab", "FBOX" = "firebrick", "C_type_lectins" = "steelblue", "Cytochrome_P450s" = "orange")) +
-  scale_y_log10(expand = c(0,0)) +
-  theme_bw() +
+  scale_fill_manual(values = c("ALL" = "black", "GPCRs" = "olivedrab", "FBOX" = "firebrick", "C_type_lectins" = "steelblue", "Nuclear_hormone_receptors" = "violet", "Cytochrome_P450s" = "orange")) +
+  scale_y_continuous(expand = expansion(mult = c(0.005,0.01))) +
   theme(
     panel.border = element_rect(color = 'black', fill = NA),
+    panel.background = element_blank(),
     legend.title = element_blank(),
-    legend.text = element_text(size = 14, color = 'black'),
+    legend.text = element_text(size = 10, color = 'black'),
     legend.box.background = element_rect(color = 'black', fill = NA),
     legend.position = 'inside',
-    legend.position.inside = c(0.9,0.9),
-    axis.text.x = element_text(size = 14, color = 'black', face = 'bold'),
+    legend.position.inside = c(0.2,0.85),
+    axis.text.x = element_text(size = 10, color = 'black', angle = 60, hjust = 1),
     axis.title.x = element_blank(),
-    axis.title.y = element_text(size = 14, color = 'black', face = 'bold'),
-    axis.text.y = element_text(size = 12, color = 'black')
+    axis.title.y = element_text(size = 10, color = 'black'),
+    axis.text.y = element_text(size = 10, color = 'black')
   ) +
-  labs(y = "OG count")
+  labs(y = expression(Orthogroup~count~(log[10])))
+stats
 
 # The sum of mean_HDR_ogCount for these three gene classes is 32% of the mean for ALL mean_HDR_ogCount
+
+ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
+
+
+
+
+

@@ -730,9 +730,9 @@ ws_genes_hdrs <- foverlaps(
 # Writing a table of all WS genes in HDRs
 ws_hdr_genes <- ws_genes_hdrs %>%
   dplyr::filter(!is.na(start)) %>%
-  dplyr::select(strain, gene, class)
+  dplyr::select(strain, gene, Orthogroup, class)
 
-# write.table(ws_hdr_genes, "../../processed_data/hdr_liftover/wild_strain_genes_inHDRs.tsv", sep = '\t', quote = F, col.names = T, row.names = F)
+# write.table(ws_hdr_genes, "../../tables/wild_strain_genes_inHDRs.tsv", sep = '\t', quote = F, col.names = T, row.names = F)
 
 # Calculating the number of genes in each gene set for every strain
 ws_genes_count <- ws_genes %>%
