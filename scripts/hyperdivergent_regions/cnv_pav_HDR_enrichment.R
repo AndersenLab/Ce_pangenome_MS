@@ -786,7 +786,7 @@ final_plt <- cowplot::plot_grid(
 final_plt
 
 # Save figure
-ggsave("../../figures/wild_strain_HDRs_enrich_CNV_PAV.png", final_plt, dpi = 600, width = 7.5, height = 7.5)
+# ggsave("../../figures/wild_strain_HDRs_enrich_CNV_PAV.png", final_plt, dpi = 600, width = 7.5, height = 7.5)
 
 
 
@@ -837,22 +837,21 @@ all_stats <- og_enrich_results_GPCRs %>% dplyr::mutate(type = "GPCRs") %>%
   dplyr::bind_rows((og_enrich_results_cyto %>% dplyr::mutate(type = "Cytochrome_P450s"))) %>% 
   dplyr::bind_rows((og_enrich_results_nhr %>% dplyr::mutate(type = "Nuclear_hormone_receptors"))) %>%
   dplyr::group_by(type) %>%
-  dplyr::mutate(mean_CNV_inHDR = mean(CNV_inHDR),
-                mean_PAV_inHDR = mean(PAV_inHDR),
-                mean_n_to_n_inHDR  = mean(one_to_one_inHDR),
-                mean_n_to_n_nonHDR  = mean(one_to_one_nonHDR),
-                mean_HDR = mean(HDR_OG_count),
-                mean_nonHDR = mean(nonHDR_OG_count)) %>%
+  dplyr::mutate(CNV_inHDR = mean(CNV_inHDR),
+                PAV_inHDR = mean(PAV_inHDR),
+                n_to_n_inHDR  = mean(one_to_one_inHDR),
+                inHDR = mean(HDR_OG_count),
+                nonHDR = mean(nonHDR_OG_count)) %>%
   dplyr::ungroup()
 
-plt_all_stats <- all_stats %>% dplyr::select(mean_CNV_inHDR, mean_PAV_inHDR, mean_n_to_n_inHDR, mean_n_to_n_nonHDR, mean_HDR, mean_nonHDR, type) %>%
+plt_all_stats <- all_stats %>% dplyr::select(CNV_inHDR, PAV_inHDR, n_to_n_inHDR, inHDR, nonHDR, type) %>%
   dplyr::distinct() %>%
   dplyr::mutate(across(-last_col(), round)) %>%
   tidyr::pivot_longer(
     cols = -type,
     names_to = "metric",
     values_to = "value") %>%
-  dplyr::mutate(metric = factor(metric, levels = c("mean_CNV_inHDR","mean_PAV_inHDR", "mean_n_to_n_inHDR", "mean_n_to_n_nonHDR", "mean_HDR","mean_nonHDR")),
+  dplyr::mutate(metric = factor(metric, levels = c("CNV_inHDR","PAV_inHDR", "n_to_n_inHDR", "inHDR","nonHDR")),
                 type = factor(type, levels = c("ALL","Cytochrome_P450s","Nuclear_hormone_receptors", "C_type_lectins","FBOX","GPCRs")))
 
 
@@ -893,7 +892,7 @@ stats <- ggplot(data = plt_all_stats %>% dplyr::filter(type != "ALL")) +
     axis.title.y = element_text(size = 10, color = 'black'),
     axis.text.y = element_text(size = 10, color = 'black')
   ) +
-  labs(y = expression(Orthogroup~count~(log[10])))
+  labs(y = expression(Mean~orthogroup~count~(log[10])))
 stats
 
 # The sum of mean_HDR_ogCount for these three gene classes is 32% of the mean for ALL mean_HDR_ogCount
