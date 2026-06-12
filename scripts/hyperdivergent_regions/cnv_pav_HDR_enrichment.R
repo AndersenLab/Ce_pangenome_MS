@@ -794,10 +794,21 @@ final_plt
 
 
 ############################################################################################################################################ 
-############################ Looking at averages among all wild strains ############################ 
+############################ Single-copy ortholog proportions in HDRs ############################ 
 ############################################################################################################################################
 ### Which gene family has the most single-copy orthologs in the HDRs in relation to all single-copy orthologs genome-wide for that gene family????
+# All genes
+sog_HDR <- ws_hdr_ogs %>% dplyr::filter(Orthogroup %in% sc_ogs)
+
+sc_ogs <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>%
+  dplyr::pull(OGs)
+
+all_relations 
+
 # GPCRs 
+gpcr_ws_HDR_SOGs <- gpcr_ws_hdr_ogs %>% dplyr::filter(Orthogroup %in% sc_ogs)
+
+gpcr_all_SOGs <- all_ws_gpcr_OGs %>% dplyr::filter(Orthogroup %in% sc_ogs)
 
 # F-box proteins
 
@@ -895,9 +906,8 @@ stats <- ggplot(data = plt_all_stats %>% dplyr::filter(type != "ALL")) +
   labs(y = expression(Mean~orthogroup~count~(log[10])))
 stats
 
-# The sum of mean_HDR_ogCount for these three gene classes is 32% of the mean for ALL mean_HDR_ogCount
-
-ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
+# Save the figure
+# ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
 
 
 
