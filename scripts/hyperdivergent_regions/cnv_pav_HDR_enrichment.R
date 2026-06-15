@@ -36,7 +36,7 @@ OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_c
           TRUE                            ~ "CNV" )) %>%
       dplyr::count(relation, name = "count")
     
-    sg_ogs <- og_matrix_relationships %>% dplyr::filter(Orthogroup %in% hdr_ogs) %>% dplyr::filter(Orthogroup %in% sc_ogs) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
+    sg_ogs <- og_matrix_relationships %>% dplyr::filter(Orthogroup %in% hdr_ogs) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
   
     cnv_hdr <- hdr_og_relations %>% dplyr::filter(relation == "CNV") %>% dplyr::pull(count)
     pav_hdr <- hdr_og_relations %>% dplyr::filter(relation == "PAV") %>% dplyr::pull(count)
@@ -793,49 +793,6 @@ final_plt
 
 
 
-############################################################################################################################################ 
-############################ Single-copy ortholog proportions in HDRs ############################ 
-############################################################################################################################################
-### Which gene family has the most single-copy orthologs in the HDRs in relation to all single-copy orthologs genome-wide for that gene family????
-# All genes
-sog_HDR <- ws_hdr_ogs %>% dplyr::filter(Orthogroup %in% sc_ogs)
-
-sc_ogs <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>%
-  dplyr::pull(OGs)
-
-all_relations 
-
-# GPCRs 
-gpcr_ws_HDR_SOGs <- gpcr_ws_hdr_ogs %>% dplyr::filter(Orthogroup %in% sc_ogs)
-
-gpcr_all_SOGs <- all_ws_gpcr_OGs %>% dplyr::filter(Orthogroup %in% sc_ogs)
-
-# F-box proteins
-
-# C-type lectins
-
-# cytochrome P450s
-
-# Nuclear hormone receptors
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 ############################################################################################################################################ 
@@ -910,6 +867,278 @@ stats
 # ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
 
 
+
+
+############################################################################################################################################ 
+############################ Single-copy ortholog proportions in HDRs ############################ 
+############################################################################################################################################
+### Which gene family has the most single-copy orthologs in the HDRs in relation to all single-copy orthologs genome-wide for that gene family????
+# Updating function........
+sc_OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_copy_ogs) {
+  
+  sc_prop_results_df = as.data.frame(matrix(ncol = 6, nrow = 140))
+  names(sc_prop_results_df) = c("strain", "scHDR", "sc_nonHDR", "scTotal", "HDR_ogCount", "nonHDR_ogCount")
+  
+  for (i in 1:length(strains)) {
+    soi <- strains[i]
+    print(paste0("On strain: ", soi, ". ", i, "/140."))
+    
+    sc_prop_results_df[i,1] = soi
+    
+    # Total number of single-copy OGs (the same for every strain)
+    sc_prop_results_df[i,4] = length(single_copy_ogs)
+    
+    # HDRs OGs
+    hdr_ogs <- ws_hdr_ogs %>% dplyr::filter(strain == soi) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
+    sc_prop_results_df[i,5] = length(hdr_ogs)
+    
+    # non-HDR OGs
+    non_hdr_ogs <- og_matrix_relationships %>% dplyr::filter(!Orthogroup %in% hdr_ogs) %>% dplyr::select(Orthogroup, dplyr::all_of(soi)) %>% filter(!is.na(.data[[soi]])) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
+    sc_prop_results_df[i,6] = length(non_hdr_ogs)
+    
+    # Single-copy HDR OGs
+    sc_hdr_ogs <- ws_hdr_ogs %>% dplyr::filter(strain == soi) %>% dplyr::distinct(Orthogroup) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::pull(Orthogroup)
+    sc_prop_results_df[i,2] = length(sc_hdr_ogs)
+    
+    # Single-copy non-HDR OGs
+    sc_nonHDR_ogs <- og_matrix_relationships %>% dplyr::select(Orthogroup, dplyr::all_of(soi)) %>% filter(!is.na(.data[[soi]])) %>% dplyr::filter(!Orthogroup %in% hdr_ogs) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
+    sc_prop_results_df[i,3] = length(sc_nonHDR_ogs)
+    
+  }
+  
+  sc_prop_results_df <- sc_prop_results_df %>% dplyr::mutate(sc_count_correct = ifelse((scHDR + sc_nonHDR) == scTotal, TRUE, FALSE),
+                                                             scHDR_prop = scHDR / HDR_ogCount,
+                                                             sc_nonHDR_prop = sc_nonHDR / nonHDR_ogCount,
+                                                             scHDR_prop_allSCs = scHDR / scTotal,
+                                                             sc_nonHDR_prop_allSCs = sc_nonHDR / scTotal) %>%
+    dplyr::mutate(across(8:11, ~ ifelse(is.na(.), 0, .))) # when 0 / 0
+  
+  return(sc_prop_results_df)
+}
+
+# Looking at all genes
+sc_prop_results <- sc_OG_enrichment(ws_hdr_ogs, strains, all_relations, sc_ogs)
+
+
+plot_df_sc_prop <- sc_prop_results %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(class = "All genes")
+
+
+sc_prop_all <- ggplot(plot_df_sc_prop) +
+  geom_col(data = plot_df_sc_prop %>% dplyr::distinct(mean_prop,region) %>% dplyr::mutate(region = factor(region, levels = c("non-HDR", "HDR"))), 
+           aes(x = 1, y = mean_prop * 100, fill = region), position = "stack") +
+  geom_boxplot(data = plot_df_sc_prop %>% dplyr::filter(region == "HDR"), aes(x = 1, y = value * 100),
+               width = 0.3, outlier.shape = NA, alpha = 0.3) +
+  geom_point(data = plot_df_sc_prop %>% dplyr::filter(region == "HDR"), aes(x = 1, y = value * 100, fill = region),
+             position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.75), size = 1.25) +
+  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
+  labs(y = "Proportion of single-copy orthogroups (%)", fill = NULL) +
+  theme_bw() +
+  theme(
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    legend.position = 'none',
+    panel.border = element_rect(color = 'black', fill = NA),
+    axis.text.y = element_text(size = 16, color = 'black'),
+    axis.title.y = element_text(size = 20, color = 'black')
+  ) +
+  scale_y_continuous(expand = c(0.01,0.01))
+sc_prop_all
+
+
+
+
+
+
+# GPCRs 
+sc_ogs_gpcr <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_gpcr_OGs) %>% dplyr::pull(OGs)
+sc_prop_results_gpcr <- sc_OG_enrichment(gpcr_ws_hdr_ogs, strains, gpcr_all_relations, sc_ogs_gpcr)
+
+plot_df_sc_prop_gpcr <- sc_prop_results_gpcr %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(class = 'GPCRs')
+
+# F-box proteins
+sc_ogs_fbox <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_fbox_OGs) %>% dplyr::pull(OGs)
+sc_prop_results_fbox <- sc_OG_enrichment(fbox_ws_hdr_ogs, strains, fbox_all_relations, sc_ogs_fbox)
+
+plot_df_sc_prop_fbox <- sc_prop_results_fbox %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(class = 'F-box proteins')
+
+# C-type lectins
+sc_ogs_lectin <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_lectin_OGs) %>% dplyr::pull(OGs)
+sc_prop_results_ctype <- sc_OG_enrichment(lectin_ws_hdr_ogs, strains, lectin_all_relations, sc_ogs_lectin)
+
+plot_df_sc_prop_ctype <- sc_prop_results_ctype %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(class = 'C-type lectins')
+
+# cytochrome P450s
+sc_ogs_cyt <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_cyto_OGs) %>% dplyr::pull(OGs)
+sc_prop_results_cyt <- sc_OG_enrichment(cyto_ws_hdr_ogs, strains, cyto_all_relations, sc_ogs_cyt)
+
+plot_df_sc_prop_cyt <- sc_prop_results_cyt %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(class = 'Cytochrome P450s')
+
+# Nuclear hormone receptors
+sc_ogs_nhr <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_nhr_OGs) %>% dplyr::pull(OGs)
+sc_prop_results_nhr <- sc_OG_enrichment(nhr_ws_hdr_ogs, strains, nhr_all_relations, sc_ogs_nhr)
+
+plot_df_sc_prop_nhr <- sc_prop_results_nhr %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "metric",
+    values_to = "value") %>%
+  dplyr::filter(metric == "scHDR_prop_allSCs" | metric == "sc_nonHDR_prop_allSCs") %>%
+  dplyr::mutate(region = ifelse(grepl("scHDR",metric),"HDR","non-HDR")) %>% 
+  dplyr::group_by(region) %>%
+  dplyr::mutate(mean_prop = mean(value)) %>%
+  dplyr::ungroup()%>%
+  dplyr::mutate(class = 'NHRs')
+
+
+# CONCATENATING ALL STATS TOGETHER
+master <- plot_df_sc_prop %>% dplyr::bind_rows(
+  plot_df_sc_prop_gpcr, plot_df_sc_prop_fbox, plot_df_sc_prop_ctype, plot_df_sc_prop_cyt, plot_df_sc_prop_nhr) %>%
+  dplyr::mutate(class = factor(class, levels = c("All genes","GPCRs","F-box proteins","C-type lectins","NHRs","Cytochrome P450s")))
+
+sc_prop_all_classes <- ggplot(master) +
+  geom_col(data = master %>% dplyr::group_by(class) %>% dplyr::distinct(mean_prop,region) %>% dplyr::mutate(region = factor(region, levels = c("non-HDR", "HDR"))), 
+           aes(x = 1, y = mean_prop * 100, fill = region), position = "stack", alpha = 0.5) +
+  geom_boxplot(data = master %>% dplyr::filter(region == "HDR"), aes(x = 1, y = value * 100),
+               width = 0.3, outlier.shape = NA, alpha = 0) +
+  geom_point(data = master %>% dplyr::filter(region == "HDR"), aes(x = 1, y = value * 100, fill = region),
+             position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.75), size = 0.6) +
+  scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
+  facet_wrap(~class, nrow = 1) +
+  labs(y = "Proportion of single-copy orthogroups (%)", fill = NULL) +
+  theme(
+    strip.text = element_text(size = 8, color ='black'),
+    axis.title.x = element_blank(),
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.background = element_blank(),
+    legend.position = 'none',
+    panel.border = element_rect(color = 'black', fill = NA),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.title.y = element_text(size = 11, color = 'black')
+  ) +
+  scale_y_continuous(expand = c(0.001,0.001), breaks = seq(0, 100, by = 10), labels = function(x) ifelse(x %% 20 == 0, x, "")) +
+  scale_x_discrete(expand = c(0,0)) +
+  coord_cartesian(xlim = c(0.7,1.3))
+sc_prop_all_classes
+
+# Save the plot!
+# ggsave("../../figures/supplementary/single_copy_OG_inHDRs.png", sc_prop_all_classes, width = 7.5, height = 5, dpi = 600)
+
+
+
+
+
+################################################################################################
+### Which single-copy orthogroups appear in wild strain HDRs the most? ###
+################################################################################################
+SC_OG_FREQ <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_copy_ogs) {
+  
+  sc_prop_results_df = as.data.frame(matrix(ncol = 5, nrow = 140))
+  names(sc_prop_results_df) = c("strain", "scHDR", "scTotal", "HDR_ogCount", "scHDR_OGs")
+  
+  for (i in 1:length(strains)) {
+    soi <- strains[i]
+    print(paste0("On strain: ", soi, ". ", i, "/140."))
+    
+    sc_prop_results_df[i,1] = soi
+    
+    # Total number of single-copy OGs (the same for every strain)
+    sc_prop_results_df[i,3] = length(single_copy_ogs)
+    
+    # HDRs OGs
+    hdr_ogs <- ws_hdr_ogs %>% dplyr::filter(strain == soi) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
+    sc_prop_results_df[i,4] = length(hdr_ogs)
+    
+    # Single-copy HDR OGs
+    sc_hdr_ogs <- ws_hdr_ogs %>% dplyr::filter(strain == soi) %>% dplyr::distinct(Orthogroup) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::pull(Orthogroup)
+    sc_prop_results_df[i,2] = length(sc_hdr_ogs)
+    ### The OG IDs
+    sc_prop_results_df[i,5] = paste(sc_hdr_ogs, collapse = ", ")
+  }
+  
+  sc_prop_results_df <- sc_prop_results_df %>% dplyr::mutate(scHDR_prop_allSCs = scHDR / scTotal) %>%
+    dplyr::mutate(scHDR_prop_allSCs = ifelse(is.na(scHDR_prop_allSCs), 0, scHDR_prop_allSCs)) # when 0 / 0
+  
+  return(sc_prop_results_df)
+}
+
+
+# Prepping input data
+sc_prop_results_cyt_OGs <- SC_OG_FREQ(cyto_ws_hdr_ogs, strains, cyto_all_relations, sc_ogs_cyt)
+
+# All cytochrome P450 single-copy orthogroups
+sc_ogs_cyt_freq <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups_SingleCopyOrthologues.txt", col_names = "OGs") %>% 
+  dplyr::filter(OGs %in% all_ws_cyto_OGs) %>% dplyr::mutate(count = 0) %>% dplyr::mutate(found_ever = FALSE) 
+
+OG_freq <- sc_prop_results_cyt_OGs %>% dplyr::select(scHDR_OGs) %>%
+  tidyr::separate_rows(scHDR_OGs, sep = ", ") %>%
+  dplyr::filter(scHDR_OGs != "") %>%
+  dplyr::count(scHDR_OGs) %>%
+  dplyr::rename(count = n, OGs = scHDR_OGs) %>%
+  dplyr::mutate(found_ever = TRUE)
+
+sc_ogs_cyt_freq <- sc_ogs_cyt_freq %>% dplyr::left_join(OG_freq, by = "OGs") %>%
+  dplyr::select(OGs, count = count.y, found_ever = found_ever.y) %>%
+  dplyr::mutate(count = ifelse(is.na(count),0,count),
+                found_ever = ifelse(is.na(found_ever),FALSE,found_ever))
 
 
 
