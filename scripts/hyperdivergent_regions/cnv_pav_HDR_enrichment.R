@@ -1139,6 +1139,9 @@ sc_ogs_cyt_freq <- sc_ogs_cyt_freq %>% dplyr::left_join(OG_freq, by = "OGs") %>%
   dplyr::select(OGs, count = count.y, found_ever = found_ever.y) %>%
   dplyr::mutate(count = ifelse(is.na(count),0,count),
                 found_ever = ifelse(is.na(found_ever),FALSE,found_ever))
+################# Will this table be written??
+
+# write.table(sc_ogs_cyt_freq, "/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/orthofinder/cytoP450_sc_OGs.tsv", col.names = T, row.names = F, quote= F, sep =)
 
 
 
