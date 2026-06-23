@@ -284,6 +284,236 @@ contrib <- ggplot(df_percent, aes(x = percent, y = strain, fill = class)) +
 
 # ggsave("../../figures/supplementary/genes_to_gene_set_contribution.png", contrib, width = 7.5, height = 8.5, dpi = 600)
 
+
+# ======================================================================================================================================================================================== #
+# Looking at number of private genes and total number of predicted protein-coding genes #
+# ======================================================================================================================================================================================== #
+private <- all_relations %>%
+  dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>%
+  dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
+  dplyr::mutate(freq = (sum / length(strainCol_c2_u))) %>%
+  dplyr::mutate(
+    class = case_when(
+      freq == 1 ~ "core",
+      freq >= 0.95 & freq < 1 ~ "soft-core",
+      freq > private_freq & freq < 0.95 ~ "accessory",
+      freq == private_freq ~ "private",
+      TRUE ~ "undefined"
+    )
+  ) %>%
+  dplyr::filter(class == "private")
+
+priv_OGs <- private %>% dplyr::pull(Orthogroup)
+
+strains <- private %>% dplyr::select(-Orthogroup,-sum,-freq,-class) %>% colnames()
+
+priv_genes <- all_relations %>%
+  dplyr::filter(Orthogroup %in% priv_OGs) 
+
+private_ordered_genes <- priv_genes %>%
+  dplyr::select(all_of(strains)) %>%  # Keep only strain columns
+  dplyr::summarise(across(everything(), sum, na.rm = TRUE)) %>%
+  pivot_longer(cols = everything(), names_to = "strain", values_to = "count") %>% 
+  dplyr::arrange(desc(count)) %>%
+  dplyr::pull(strain)
+
+private_final <- priv_genes %>%
+  dplyr::select(Orthogroup, all_of(private_ordered_genes))
+
+trp <- private_final %>%
+  dplyr::select(-Orthogroup) %>%
+  t() %>% 
+  as.data.frame() %>%
+  tibble::rownames_to_column("strain") %>%
+  dplyr::mutate(strain = gsub("_count","", strain)) %>%
+  dplyr::mutate(count = rowSums(across(where(is.numeric)), na.rm = TRUE)) %>%
+  dplyr::select(strain, count)
+
+trp$strain <- factor(trp$strain, levels = trp$strain)
+
+PC_count <- all_genes_strain %>%
+  dplyr::count(strain, name = "n_genes") 
+
+geneCount_OGs <- trp %>%
+  dplyr::left_join(PC_count, by = "strain")
+
+geneCount_OGs$strain <- factor(geneCount_OGs$strain, levels = geneCount_OGs$strain)
+
+geneCount_OGs <- geneCount_OGs %>% dplyr::mutate(n_genes_scaled = n_genes / 100)
+
+gene_mean <- geneCount_OGs %>% dplyr::summarise(mean_gene_count = mean(n_genes)) # 22,644
+
+gene_count_privs <- ggplot(geneCount_OGs, aes(x = strain)) +
+  geom_col(aes(y = count), fill = "magenta3", width = 0.6, alpha = 0.5, color = "black", linewidth = 0.1) +
+  geom_line(aes(y = n_genes_scaled, group = 1), color = "blue", size = 0.5) +
+  geom_point(aes(y = n_genes_scaled), color = "blue", size = 0.5) +
+  scale_y_continuous(expand = c(0.01, 0), name = "Private genes", sec.axis = sec_axis(~ ., name = "Protein-coding genes (1e2)")) +
+  theme(
+    axis.text.x = element_text(size = 4, color = 'black', angle = 80, hjust = 1),
+    panel.background = element_blank(),
+    axis.title = element_text(size = 12, color = 'black'),
+    axis.text.y = element_text(size = 11, color = 'black'),
+    panel.border = element_rect(fill = NA),
+    legend.position = "inside",
+    legend.position.inside = c(0.9,0.8)) +
+  labs(x = NULL)
+gene_count_privs
+
+# ggsave("../../figures/supplementary/private_gene_count_allGenes.png", gene_count_privs, width = 7.5, height = 5, dpi = 600)
+
+
+
+
+# ======================================================================================================================================================================================== #
+# Looking at how the accesory genome clusters with strain relatedness #
+# ======================================================================================================================================================================================== #
+
+# ======================================================================================================================================================================================== #
+# Plotting orthogroup/gene family presence/absence heatmap, clustered by strain relatedness
+# ======================================================================================================================================================================================== #
+colnames(all_relations) <- strainCol_c2
+pav_mat <- all_relations %>% dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>% 
+  dplyr::mutate(across(2:ncol(.), ~ifelse(is.na(.), 0, .))) %>%
+  dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
+  dplyr::mutate(freq = (sum / length(strainCol_c2_u))) %>%
+  dplyr::mutate(
+    class = case_when(
+      freq == 1 ~ "core",
+      freq > private_freq & freq < 1 ~ "accessory",
+      freq == private_freq ~ "private",
+      TRUE ~ "undefined")) %>%
+  dplyr::select(-freq) %>%
+  dplyr::mutate(class = factor(class, levels = c("core", "accessory", "private"))) %>%
+  dplyr::arrange(desc(sum)) %>%
+  dplyr::select(-sum) %>%
+  dplyr::mutate(Orthogroup = factor(Orthogroup, levels = unique(Orthogroup)))
+
+pav_long <- pav_mat %>%
+  tidyr::pivot_longer(
+    cols = all_of(strainCol_c2_u),
+    names_to = "strain",
+    values_to = "presence") %>%
+  dplyr::mutate(
+    class_presence = case_when(
+      presence == 1 ~ paste0(class, "_present"),
+      presence == 0 ~ paste0(class, "_absent"))) %>%
+  dplyr::group_by(strain,class) %>%
+  dplyr::mutate(class_count=sum(presence)) %>%
+  dplyr::ungroup() 
+
+strain_order_acc <- pav_long %>%
+  dplyr::filter(class=="accessory") %>%
+  dplyr::arrange(class_count) %>%
+  dplyr::distinct(strain,.keep_all = T) %>%
+  dplyr::pull(strain) 
+
+# Tiles are colored by gene set classification
+# ggplot(pav_long %>%
+#          dplyr::mutate(strain=factor(strain,levels=strain_order_acc)),
+#        aes(x = Orthogroup, y = strain, fill = class_presence)) +
+#   geom_tile() +
+#   scale_fill_manual(
+#     values = c(
+#       core_present       = "green4",
+#       core_absent        = "white",
+#       accessory_present  = "#DB6333",
+#       accessory_absent   = "white",
+#       private_present    = "magenta3",
+#       private_absent     = "white")) +
+#   labs(x = "Orthogroups", y = "Strain", fill = "Class × presence") +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_blank(),      
+#     axis.ticks.x = element_blank(),
+#     panel.grid = element_blank(),
+#     legend.position = 'none',
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     axis.text.y = element_text(size = 6, color = 'black'),
+#     axis.title.x = element_text(color = 'black', size = 12, face = 'bold'),
+#     axis.title.y = element_blank())
+
+# All tiles are colored gray but there are colored bars above indicating gene set classification of orthogroups
+og_strip <- pav_mat %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  dplyr::mutate(Orthogroup = factor(Orthogroup, levels = levels(pav_mat$Orthogroup)))
+
+# p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = strain_order_acc)),aes(x = Orthogroup, y = strain, fill = factor(presence))) +
+#   geom_tile() +
+#   scale_fill_manual(values = c(`0` = "white", `1` = "gray40"), guide = "none") +
+#   labs(x = "Orthogroups", y = "Strain") +
+#   theme_minimal() +
+#   theme(
+#     axis.text.x = element_blank(),
+#     axis.ticks.x = element_blank(),
+#     panel.grid = element_blank(),
+#     panel.border = element_rect(color = "black", fill = NA),
+#     axis.text.y = element_text(size = 6, color = "black"),
+#     axis.title.x = element_text(color = "black", size = 12, face = "bold"),
+#     axis.title.y = element_blank(),
+#     plot.margin = margin(t = 0, r = 5, b = 5, l = 5))
+
+p_strip <- ggplot(og_strip, aes(x = Orthogroup, y = 1, fill = class)) +
+  geom_tile() +
+  scale_fill_manual(values = c(core = "green4", accessory = "#DB6333", private = "magenta3"),guide = "none") +
+  theme_void() +
+  theme(
+    plot.margin = margin(t = 5, r = 5, b = 0, l = 5))
+
+# cowplot::plot_grid(p_strip, p_heat, ncol = 1, rel_heights = c(0.04, 1), align = "v", axis = "lr")
+
+
+tree_file <- "/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/busco_phylogeny/busco2phylo-nf/busco2phylo-20260114/iqtree/supermatrix.fa.contree"
+busco_tree <- read.tree(tree_file)
+busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
+strain_order_tree <- busco_tree$tip.label
+
+# Double check
+setdiff(strain_order_tree, unique(pav_long$strain))
+setdiff(unique(pav_long$strain), strain_order_tree)
+
+p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = strain_order_tree)),aes(x = Orthogroup, y = strain, fill = factor(presence))) +
+  geom_tile() +
+  scale_fill_manual(values = c(`0` = "white", `1` = "gray40"), guide = "none") +
+  labs(x = "Orthogroups", y = "Strain") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),
+    axis.ticks.x = element_blank(),
+    panel.grid = element_blank(),
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.y = element_text(size = 6, color = "black"),
+    axis.title.x = element_text(color = "black", size = 12, face = "bold"),
+    axis.title.y = element_blank(),
+    plot.margin = margin(t = 0, r = 0, b = , l = -1)) +
+  scale_y_discrete(expand = c(0, 0)) 
+
+p_tree <- ggtree(busco_tree_scaled) +
+  scale_y_continuous(breaks = seq_along(strain_order_tree), expand = c(0, 2)) +
+  # theme_tree2() +
+  theme(
+    axis.text = element_blank(),
+    axis.ticks = element_blank(),
+    panel.grid = element_blank(),
+    axis.title = element_blank(),
+    plot.margin = margin(40, 0, 5, 5))
+# p_tree
+
+final_heatmap <- cowplot::plot_grid(
+  p_tree,
+  p_strip / p_heat + plot_layout(heights = c(0.04, 1)),
+  ncol = 2,
+  rel_widths = c(0.12, 1),
+  # align = "v",
+  axis = "tb")
+final_heatmap
+
+ggsave("../../figures/supplementrary/PAV_OG_heatmap.png", final_heatmap, width = 7.5, height = 7.5, dpi = 600)
+
+
+
+
+
 ####################################################################################################
 ####################################################################################################
 
