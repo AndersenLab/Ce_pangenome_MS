@@ -7,6 +7,8 @@ library(tidyr)
 library(data.table)
 library(cowplot)
 library(ggforce)
+library(ggtree)
+library(patchwork)
 
 ####################################################################################################
 ####################################################################################################
@@ -132,10 +134,6 @@ geneset_hist <- ggplot(data = classification, aes(x = sum, y = n, fill = class))
     axis.text = element_text(size=10, color = 'black')) 
 geneset_hist
 
-# OG_class_count <- classification %>%
-#   dplyr::group_by(class) %>%
-#   dplyr::summarise(n_OG = sum(n)) %>%
-#   dplyr::ungroup()
 
 ### PLOTTING BASED ON GENES ###
 classification_genes <- all_relations %>%
@@ -367,11 +365,8 @@ gene_count_privs
 # ======================================================================================================================================================================================== #
 # Looking at how the accesory genome clusters with strain relatedness #
 # ======================================================================================================================================================================================== #
-
-# ======================================================================================================================================================================================== #
-# Plotting orthogroup/gene family presence/absence heatmap, clustered by strain relatedness
-# ======================================================================================================================================================================================== #
 colnames(all_relations) <- strainCol_c2
+
 pav_mat <- all_relations %>% dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>% 
   dplyr::mutate(across(2:ncol(.), ~ifelse(is.na(.), 0, .))) %>%
   dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
@@ -407,74 +402,31 @@ strain_order_acc <- pav_long %>%
   dplyr::distinct(strain,.keep_all = T) %>%
   dplyr::pull(strain) 
 
-# Tiles are colored by gene set classification
-# ggplot(pav_long %>%
-#          dplyr::mutate(strain=factor(strain,levels=strain_order_acc)),
-#        aes(x = Orthogroup, y = strain, fill = class_presence)) +
-#   geom_tile() +
-#   scale_fill_manual(
-#     values = c(
-#       core_present       = "green4",
-#       core_absent        = "white",
-#       accessory_present  = "#DB6333",
-#       accessory_absent   = "white",
-#       private_present    = "magenta3",
-#       private_absent     = "white")) +
-#   labs(x = "Orthogroups", y = "Strain", fill = "Class × presence") +
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),      
-#     axis.ticks.x = element_blank(),
-#     panel.grid = element_blank(),
-#     legend.position = 'none',
-#     panel.border = element_rect(color = 'black', fill = NA),
-#     axis.text.y = element_text(size = 6, color = 'black'),
-#     axis.title.x = element_text(color = 'black', size = 12, face = 'bold'),
-#     axis.title.y = element_blank())
-
-# All tiles are colored gray but there are colored bars above indicating gene set classification of orthogroups
+# Colored bars above OGS indicating gene set classification
 og_strip <- pav_mat %>%
   dplyr::select(Orthogroup, class) %>%
   dplyr::distinct() %>%
   dplyr::mutate(Orthogroup = factor(Orthogroup, levels = levels(pav_mat$Orthogroup)))
 
-# p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = strain_order_acc)),aes(x = Orthogroup, y = strain, fill = factor(presence))) +
-#   geom_tile() +
-#   scale_fill_manual(values = c(`0` = "white", `1` = "gray40"), guide = "none") +
-#   labs(x = "Orthogroups", y = "Strain") +
-#   theme_minimal() +
-#   theme(
-#     axis.text.x = element_blank(),
-#     axis.ticks.x = element_blank(),
-#     panel.grid = element_blank(),
-#     panel.border = element_rect(color = "black", fill = NA),
-#     axis.text.y = element_text(size = 6, color = "black"),
-#     axis.title.x = element_text(color = "black", size = 12, face = "bold"),
-#     axis.title.y = element_blank(),
-#     plot.margin = margin(t = 0, r = 5, b = 5, l = 5))
-
-p_strip <- ggplot(og_strip, aes(x = Orthogroup, y = 1, fill = class)) +
+p_strip <- ggplot(og_strip, aes(x = Orthogroup, y = 1, fill = class), alpha = 0.5) +
   geom_tile() +
   scale_fill_manual(values = c(core = "green4", accessory = "#DB6333", private = "magenta3"),guide = "none") +
   theme_void() +
   theme(
     plot.margin = margin(t = 5, r = 5, b = 0, l = 5))
 
-# cowplot::plot_grid(p_strip, p_heat, ncol = 1, rel_heights = c(0.04, 1), align = "v", axis = "lr")
-
-
-tree_file <- "/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/busco_phylogeny/busco2phylo-nf/busco2phylo-20260114/iqtree/supermatrix.fa.contree"
+tree_file <- "../../processed_data/genome_resources/trees/BUSCO_supermatrix.fa.contree"
 busco_tree <- read.tree(tree_file)
 busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
 strain_order_tree <- busco_tree$tip.label
 
-# Double check
-setdiff(strain_order_tree, unique(pav_long$strain))
+# Double check to make sure strain ordering is the same in the matrix and on the tree leaves
+setdiff(strain_order_tree, unique(pav_long$strain)) 
 setdiff(unique(pav_long$strain), strain_order_tree)
 
 p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = strain_order_tree)),aes(x = Orthogroup, y = strain, fill = factor(presence))) +
   geom_tile() +
-  scale_fill_manual(values = c(`0` = "white", `1` = "gray40"), guide = "none") +
+  scale_fill_manual(values = c(`0` = "white", `1` = "black"), guide = "none") +
   labs(x = "Orthogroups", y = "Strain") +
   theme_minimal() +
   theme(
@@ -482,34 +434,32 @@ p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = str
     axis.ticks.x = element_blank(),
     panel.grid = element_blank(),
     panel.border = element_rect(color = "black", fill = NA),
-    axis.text.y = element_text(size = 6, color = "black"),
-    axis.title.x = element_text(color = "black", size = 12, face = "bold"),
+    axis.text.y = element_text(size = 3, color = "black"),
+    axis.title.x = element_text(color = "black", size = 12),
     axis.title.y = element_blank(),
     plot.margin = margin(t = 0, r = 0, b = , l = -1)) +
   scale_y_discrete(expand = c(0, 0)) 
 
 p_tree <- ggtree(busco_tree_scaled) +
   scale_y_continuous(breaks = seq_along(strain_order_tree), expand = c(0, 2)) +
-  # theme_tree2() +
   theme(
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     panel.grid = element_blank(),
     axis.title = element_blank(),
-    plot.margin = margin(40, 0, 5, 5))
-# p_tree
+    plot.margin = margin(22, 0, 15, 5))
+p_tree
 
-final_heatmap <- cowplot::plot_grid(
+
+PAV_OG_matrix <- cowplot::plot_grid(
   p_tree,
-  p_strip / p_heat + plot_layout(heights = c(0.04, 1)),
+  p_strip / p_heat + patchwork::plot_layout(heights = c(0.04, 1)),
   ncol = 2,
   rel_widths = c(0.12, 1),
-  # align = "v",
   axis = "tb")
-final_heatmap
 
-ggsave("../../figures/supplementrary/PAV_OG_heatmap.png", final_heatmap, width = 7.5, height = 7.5, dpi = 600)
-
+# Save the plot!
+# ggsave("../../figures/supplementary/PAV_OG_matrix.png", PAV_OG_matrix, width = 7.5, height = 6, dpi = 600)
 
 
 
@@ -716,10 +666,10 @@ priv_summary <- priv_final %>%
 RAREFACT <- ggplot() +
   # Pangenome
   geom_errorbar(data = pan_summary, aes(x = n_strains, ymin = mean_core - sd_core, ymax = mean_core + sd_core), width = 0.5, alpha = 0.5) +
-  geom_point(data = pan_summary, aes(x = n_strains, y = mean_core, color = "Pangenome"), size = 0.5) +
+  geom_point(data = pan_summary, aes(x = n_strains, y = mean_core, color = "Pangenome"), size = 0.3) +
   # Core
   geom_errorbar(data = core_summary, aes(x = n_strains, ymin = mean_core - sd_core, ymax = mean_core + sd_core), width = 0.5, alpha = 0.5) +
-  geom_point(data = core_summary, aes(x = n_strains, y = mean_core, color = "Core"), size = 0.5) +
+  geom_point(data = core_summary, aes(x = n_strains, y = mean_core, color = "Core"), size = 0.3) +
   scale_color_manual(
     values = c("Pangenome" = "blue", "Core" = "green4"),
     limits = c("Pangenome", "Core")) +
@@ -768,6 +718,9 @@ rarefact_supplement_all <- ggplot() +
 
 # ggsave("../../figures/supplementary/pangenome_rarefaction.png", rarefact_supplement_all, height = 7, width = 7.5, dpi = 600)
 
+
+
+
 ####################################################################################################
 ####################################################################################################
 
@@ -814,21 +767,6 @@ plt_data <- ortho_count_wCoord %>%
   dplyr::filter(seqid != "MtDNA") %>%
   dplyr::mutate(mid_mb = (start + end) / 2 / 1e6)
 
-ggplot(data = plt_data) +
-  geom_rect(aes(xmin = start / 1e6, xmax = end / 1e6, fill = class), ymin = -Inf, ymax = Inf, alpha = 0.5) +
-  geom_density(aes(x = mid_mb, y = after_stat(scaled), color = class), adjust = 0.5, linewidth = 0.9, position = "identity") +
-  scale_color_manual(values = c(accessory="#DB6333", private="magenta3", core="green4")) +
-  scale_fill_manual(values = c("accessory" = "#DB6333", "private" = "magenta3", "core" = "green4")) +
-  facet_wrap(~seqid, scales = "free") +
-  theme(axis.title.x = element_text(size = 16, color = 'black', face = 'bold'),
-        axis.text.x = element_text(size = 13, color = 'black'),
-        panel.background = element_blank(),
-        panel.border = element_rect(fill = NA, color = 'black')) +
-  scale_x_continuous(expand = c(0,0)) +
-  xlab("N2 genome position (Mb)") +
-  scale_y_continuous(NULL, breaks = NULL) 
-
-
 plt_data <- plt_data %>%
   mutate(seqid = factor(seqid, levels = c("I","II","III","IV","V","X"))) %>%
   dplyr::rename(Class = class)
@@ -839,25 +777,6 @@ left_facets <- lev[seq(1, length(lev), by = ncol_facets)]
 class_labels <- plt_data %>% dplyr::distinct(Class) %>% dplyr::mutate(y = ifelse(Class == "core", 1.75,
                                                                                  ifelse(Class == "accessory", 1, 0.25)), x = -Inf)
 class_labels <- tidyr::crossing(class_labels, seqid = left_facets)
-
-ggplot() + 
-  geom_rect(data = plt_data %>% dplyr::filter(Class == "core"), aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 1.5, ymax = 2), fill = "green4", alpha = 0.5) +
-  geom_rect(data = plt_data %>% dplyr::filter(Class == "accessory"), aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0.75, ymax = 1.25), fill = "#DB6333", alpha = 0.5) +
-  geom_rect(data = plt_data %>% dplyr::filter(Class == "private"), aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 0.5), fill = "magenta3", alpha = 0.5) +
-  geom_text(data = class_labels,aes(x = x, y = y, label = Class), hjust = 1.1, fontface = "bold", size = 4, inherit.aes = FALSE) +
-  facet_wrap(~seqid, scales = "free") +
-  coord_cartesian(clip = "off") +
-  theme(axis.title.x = element_text(size = 16, color = 'black', face = 'bold'),
-        axis.text.x = element_text(size = 13, color = 'black'),
-        panel.background = element_blank(),
-        panel.border = element_rect(fill = "NA", color = 'black'),
-        strip.background = element_blank(),
-        strip.text.x = element_blank(),
-        plot.margin = margin(l = 70)) +
-  scale_x_continuous(expand = c(0,0)) +
-  xlab("N2 genome position (Mb)") +
-  scale_y_continuous(NULL, breaks = NULL)
-
 
 ggplot(data = plt_data) +
   geom_density(aes(x = mid_mb, y = after_stat(count), color = Class), adjust = 1, linewidth = 0.9, position = "identity") + 
@@ -871,7 +790,7 @@ ggplot(data = plt_data) +
         panel.border = element_rect(fill = "NA", color = 'black'),
         # strip.background = element_blank(),
         axis.text.y = element_text(size = 12, color = 'black'),
-        axis.title.y = element_text(size =14, color = 'black', face = 'bold'),
+        axis.title.y = element_text(size =14, color = 'black'),
         # strip.text.x = element_blank(),
         plot.margin = margin(l = 70)) +
   ylab("Kernel Density * Count")
@@ -916,7 +835,7 @@ DENSITY <- ggplot() +
   scale_fill_manual(values = c("Acc."="#DB6333", "Priv."="magenta3", "Core"="green4")) +
   # density scaled by counts (absolute abundance)
   geom_density(data = plt_data, aes(x = mid_mb, y = after_stat(count), color = Class), adjust = 0.5, linewidth = 0.4, position = "identity", show.legend = FALSE, alpha = 0.5) +
-  geom_text(data = class_labels_final, aes(x = x, y = y, label = Class), hjust = 1.1, size = 2.5, inherit.aes = FALSE) +
+  # geom_text(data = class_labels_final, aes(x = x, y = y, label = Class), hjust = 1.1, size = 2.5, inherit.aes = FALSE) +
   geom_text(data = density_label_final, aes(x = x, y = y, label = label), vjust = -1, size = 3, inherit.aes = FALSE, angle = 90) +
   scale_color_manual(values = c(accessory="#DB6333", private="magenta3", core="green4")) +
   facet_wrap(~ seqid, scales = "free_x", ncol = 3) +
@@ -937,13 +856,13 @@ DENSITY <- ggplot() +
     plot.margin  = margin(l = 30, r = 5, t = 5, b = 5))
 DENSITY
 
-# Looking at bandwith per gene set
-# bw_by_class <- plt_data %>%
-#   dplyr::group_by(Class) %>%
-#   dplyr::summarise(bw = density(mid_mb)$bw)
-# bw_by_class
-# 
-# class_count <- rects %>% dplyr::group_by(`Gene set`) %>% dplyr::mutate(number = n()) %>% dplyr::distinct(`Gene set`,number)
+# Looking at bandwith per gene set (in)
+bw_by_class <- plt_data %>%
+  dplyr::group_by(Class) %>%
+  dplyr::summarise(bw = density(mid_mb)$bw)
+bw_by_class
+ 
+class_count <- rects %>% dplyr::group_by(`Gene set`) %>% dplyr::mutate(number = n()) %>% dplyr::distinct(`Gene set`,number) # The number of N2 genes contributing to each class
 
 
 # Concatenating plots for bottom row of final plot
