@@ -2,6 +2,7 @@ library(readr)
 library(ggplot2)
 library(dplyr)
 library(data.table)
+library(GenomicRanges)
 
 # Load in all SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter)
@@ -149,22 +150,47 @@ ggsave("../../figures/supplementary/sv_snp_correlation.png", snp_sv_corr, width 
 
 
 
-
 #############################################################################
 # The largest PAV-identified inversion
 #############################################################################
+largest <- filt_calls %>%
+  dplyr::select(chrom,pos,sv_type, sv_length, strain) %>%
+  dplyr::group_by(sv_type) %>%
+  dplyr::arrange(desc(sv_length)) %>%
+  dplyr::slice_head(n = 4) 
 
+soi <- largest %>% 
+  dplyr::distinct(strain) %>%
+  dplyr::pull()
 
+nucmer <- readr::read_tsv("../../processed_data/genome_resources/genome_data/141_nucmer_ECA741CGC1.tsv", col_names = c("N2S","N2E","WSS","WSE","L1","L2","IDY","LENR","LENQ","N2_chr","contig","strain")) %>%
+  dplyr::filter(strain %in% soi)
 
+inv <- nucmer %>% dplyr::filter(strain == "ECA1413" | strain == "ECA2968" | strain == "XZ1515") %>% dplyr::filter(N2_chr == "IV") %>% 
+  dplyr::filter(contig == "ptg000001l" | contig == "ptg000008l" | contig == "ptg000003l") # retaining the main contigs for each strain
 
+inv_rect <- largest %>% dplyr::filter(sv_type == "INV") %>% dplyr::filter(strain != "JU3226") # isolating the largest INV that is shared among three strains from Kaua'i
 
+largest_PAV_INV <- ggplot(inv) +
+  geom_rect(data = inv_rect, aes(xmin = (pos + sv_length) / 1e6, xmax = pos / 1e6, ymin = -Inf, ymax = Inf), fill = "gold", alpha = 0.5) +
+  geom_segment(aes(x = N2S / 1e6, xend = N2E / 1e6, y = WSS / 1e6, yend = WSE / 1e6), linewidth = 0.7, color = 'black') +
+  theme_bw() +
+  facet_wrap(~strain) +
+  theme(
+    legend.position = "none",
+    strip.text = element_text(size = 14, color = 'black'),
+    axis.text = element_text(size = 10, color = 'black'),
+    axis.ticks = element_blank(),
+    axis.title = element_text(size = 12, color = 'black'),
+    panel.background = element_blank(),
+    panel.grid = element_blank(),
+    panel.border = element_rect(fill = NA)) +
+  coord_cartesian(xlim = c(6, 8)) +
+  labs(x = "N2 genome position (Mb)", y = "Wild strain contig position (Mb)")
+largest_PAV_INV
 
-
-
-
-
-
-
+# Save the plot
+ggsave("../../figures/supplementary/largest_PAV_INV.png", largest_PAV_INV, width = 7.5, height = 6, dpi = 600)
 
 
 
