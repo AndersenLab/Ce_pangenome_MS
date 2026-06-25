@@ -404,23 +404,24 @@ inv_freq <- ggplot(inv_bin_plt) +
   geom_point(aes(x = middle, y = freq), color = 'gold1', size = 0.3) +
   facet_wrap(~chrom, nrow = 1, scales = "free_x") +
   theme(
-    axis.text.x = element_blank(),
-    axis.ticks = element_blank(),
     axis.title = element_blank(),
+    axis.text.x = element_blank(),
+    axis.title.x = element_text(size = 14, color = 'black'),
     axis.text.y = element_text(size = 10, color = 'black'),
     strip.text = element_blank(),
     panel.border = element_rect(color = 'black', fill = NA),
     panel.background = element_blank()) +
+  xlab("N2 genomic position (Mb)") +
   coord_cartesian(ylim = c(0,1.01)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1), breaks = seq(0, 0.75, 0.25))
-
+inv_freq
+  
 # Concatenate together all three SV types!
 all_three_SVs <- cowplot::plot_grid(
   del_freq, ins_freq, inv_freq,
   nrow = 3,
   align = "v",
   rel_heights = c(1,1,1))
-all_three_SVs
 
 # Save the figure
 ggsave("../../figures/supplementary/SV_HDR_enrichment.png", all_three_SVs, width = 7.5, height = 6, dpi = 600)
