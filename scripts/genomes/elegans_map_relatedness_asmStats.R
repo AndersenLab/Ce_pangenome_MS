@@ -18,7 +18,7 @@ library(ComplexHeatmap)
 ####################################################################################################
 
 # Strain list
-strains <- readr::read_tsv("../../processed_data/genome_resources/genome_data/wild_strain_genome_stats.tsv") %>%
+strains <- readr::read_tsv("../../tables//wild_strain_genome_stats.tsv") %>%
   dplyr::select(Strain) %>%
   dplyr::rename(strain = Strain) %>% 
   dplyr::pull()
@@ -31,7 +31,8 @@ geo <- geo_initial %>%
   dplyr::select(isotype, lat, long, geo) %>%
   dplyr::mutate(hifi_sequence = ifelse(isotype %in% strains, "Yes", "No")) %>%
   dplyr::mutate(lat = as.numeric(lat),
-                long = as.numeric(long))
+                long = as.numeric(long)) %>%
+  dplyr::arrange(hifi_sequence)
 # SIX STRAINS ARE MISSING LAT AND LONG INFORMATION #################################################################################################################
 # TWO OF THEM ARE SELECTED FOR HIFI SEQUENCING
 
@@ -41,7 +42,7 @@ world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 # Plotting where isotype strains have been collected and which ones were selected for sequencing
 MAP <- ggplot() +
   geom_sf(data = world, fill = "white", color = "black", linewidth = 0.2) +
-  geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 1, alpha = 0.85) +
+  geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 1) +
   scale_color_manual(values = c("Yes" = "red", "No" = "black")) +
   coord_sf(expand = FALSE) +
   theme_minimal() +
@@ -52,7 +53,8 @@ MAP <- ggplot() +
     legend.position = "inside",
     legend.position.inside = c(0.1,0.25),
     axis.text = element_blank(),
-    panel.grid = element_blank()) 
+    panel.grid = element_blank()) +
+  guides(color = guide_legend(override.aes = list(size = 3)))
 
 
 ####################################################################################################
@@ -156,7 +158,7 @@ MATRIX <- ggplotify::as.ggplot(heatmap_grob2)
 ####################################################################################################
 ####################################################################################################
 # Reading in genome stats
-stats <- readr::read_tsv("../../processed_data/genome_resources/genome_data/wild_strain_genome_stats.tsv") %>%
+stats <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv") %>%
   dplyr::select(Strain,`Number of contigs`,`Genome size`, `Contig N50`, `Contig L90`, `Contig N90`, `Coverage`, `BUSCO completeness (genome)`) %>%
   dplyr::rename(strain = Strain, n_contigs = `Number of contigs`, contig_bp = `Genome size`, ctg_N50 = `Contig N50`, ctg_L90 = `Contig L90`, ctg_N90 = `Contig N90`)
 
@@ -258,3 +260,4 @@ final_plot <- cowplot::plot_grid(
 
 # Save the plot
 ggsave("../../figures/strain_selection_genome_stats.png", final_plot, width = 7.5, height = 7.5, dpi = 600)
+
