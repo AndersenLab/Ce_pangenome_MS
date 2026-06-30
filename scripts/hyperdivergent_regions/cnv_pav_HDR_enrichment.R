@@ -649,7 +649,9 @@ final_cnv_pav_geneclass <- plot_df_norm %>% dplyr::mutate(gene_class = "All gene
                    plot_df_norm_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
   dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
-  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))
+  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))%>%
+  dplyr::filter(gene_class != "All genes")
+
 
 concatenated_stats <- wilcox_results %>% dplyr::mutate(gene_class = "All genes") %>% 
   dplyr::bind_rows(wilcox_results_cyto %>% dplyr::mutate(gene_class = "Cytochrome P450s"),
@@ -659,7 +661,8 @@ concatenated_stats <- wilcox_results %>% dplyr::mutate(gene_class = "All genes")
                    wilcox_results_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
   dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
-  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))
+  dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class))) %>%
+  dplyr::filter(gene_class != "All genes")
                      
 
 
@@ -679,7 +682,7 @@ all_enr_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = 
     legend.position  = 'inside',
     legend.position.inside = c(0.071,0.895),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 8, color = 'black'),
+    strip.text = element_text(size = 8.5, color = 'black'),
     legend.text = element_text(size = 8, color = 'black'),
     axis.text.y = element_text(size = 9, color = 'black'),
     axis.title.y = element_text(size = 9, color = 'black')
@@ -703,7 +706,8 @@ all_enr_plot
   # dplyr::distinct(strain) %>%
   # dplyr::pull(strain)
 
-ipr_enr <- readr::read_tsv("../../tables/enriched_IPR_inHDRs.tsv")
+ipr_enr <- readr::read_tsv("../../tables/enriched_IPR_inHDRs.tsv") %>%
+  dplyr::slice_tail(n = 35)
 
 # FRACT <- ggplot(data = rel_fract %>% dplyr::mutate(strain = factor(strain, levels = strain_order))) +
 #   geom_col(aes(x = strain, y = scaled_geneSet_props_HDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
@@ -731,9 +735,9 @@ ENR <- ggplot(ipr_enr) +
   geom_point(aes(x = n_genes_HDR, y = plotpoint, size = enrich_ratio, fill = -log10(FDR_p.adjust), shape = `Gene set`)) +
   scale_y_continuous(breaks = ipr_enr$plotpoint, labels = ipr_enr$IPR_description, name = "", expand = c(0.02,0.02)) +
   scale_shape_manual(values = c("Core" = 21, "Accessory" = 22, "Private" = 24)) +
-  scale_fill_gradient(low = "yellow", high = "red", breaks = c(round(min(-log10(ipr_enr$FDR_p.adjust))), 
+  scale_fill_gradient(low = "yellow", high = "red", breaks = c(round(min(-log10(ipr_enr$FDR_p.adjust))),
                                                                round((max(-log10(ipr_enr$FDR_p.adjust)) + min(-log10(ipr_enr$FDR_p.adjust))) / 2), 
-                                                               round(max(-log10(ipr_enr$FDR_p.adjust))))) +
+                                                               round(max(-log10(ipr_enr$FDR_p.adjust)) - 0.5))) +
   scale_size_continuous(range = c(0.5, 3), name = "Fold enrichment", breaks = pretty(ipr_enr$enrich_ratio, n = 4)) +
   coord_cartesian(xlim = c(0, 12000)) +
   theme(axis.text.x = element_text(size=9, color='black'),
