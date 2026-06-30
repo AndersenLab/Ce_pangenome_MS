@@ -648,8 +648,8 @@ final_cnv_pav_geneclass <- plot_df_norm %>% dplyr::mutate(gene_class = "All gene
                    plot_df_norm_lectin %>% dplyr::mutate(gene_class = "C-type lectins"),
                    plot_df_norm_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
-  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
   dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class)))%>%
+  dplyr::mutate(gene_class = factor(gene_class, levels = c("F-box genes", "GPCRs", "C-type lectins", "NHRs", "Cytochrome P450s"))) %>%
   dplyr::filter(gene_class != "All genes")
 
 
@@ -660,8 +660,8 @@ concatenated_stats <- wilcox_results %>% dplyr::mutate(gene_class = "All genes")
                    wilcox_results_ct %>% dplyr::mutate(gene_class = "C-type lectins"),
                    wilcox_results_nhr %>% dplyr::mutate(gene_class = "Nuclear hormone receptors")) %>%
   dplyr::filter(stat == "CNV" | stat == "PAV" | stat == "n-to-n") %>%
-  dplyr::mutate(gene_class = factor(gene_class, levels = c("All genes", "F-box genes", "GPCRs", "C-type lectins", "Cytochrome P450s", "Nuclear hormone receptors"))) %>%
   dplyr::mutate(gene_class = ifelse(gene_class == "Nuclear hormone receptors", "NHRs", as.character(gene_class))) %>%
+  dplyr::mutate(gene_class = factor(gene_class, levels = c("F-box genes", "GPCRs", "C-type lectins", "NHRs", "Cytochrome P450s"))) %>%
   dplyr::filter(gene_class != "All genes")
                      
 
@@ -678,12 +678,14 @@ all_enr_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = 
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 9, color = 'black'),
     panel.grid = element_blank(),
-    # legend.box.background = element_rect(color = "black", size = 1),
     legend.position  = 'inside',
-    legend.position.inside = c(0.071,0.895),
+    legend.position.inside = c(0.475,0.895),
     panel.border = element_rect(color = 'black', fill = NA),
     strip.text = element_text(size = 8.5, color = 'black'),
     legend.text = element_text(size = 8, color = 'black'),
+    legend.margin = margin(0, 0, 0, 0),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.spacing = unit(0, "pt"),
     axis.text.y = element_text(size = 9, color = 'black'),
     axis.title.y = element_text(size = 9, color = 'black')
   )  +
