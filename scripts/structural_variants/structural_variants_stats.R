@@ -3,6 +3,7 @@ library(ggplot2)
 library(dplyr)
 library(data.table)
 library(GenomicRanges)
+library(cowplot)
 
 # Load in all SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter)
@@ -593,9 +594,9 @@ n2_genes_plt <- N2_gff %>%
   dplyr::filter(type == "gene") %>%
   dplyr::mutate(attributes = gsub("ID=gene:","",attributes)) %>%
   dplyr::mutate(attributes = sub(";.*", "", attributes)) %>%
-  dplyr::select(seqid,start,end,attributes) %>%
+  dplyr::select(seqid,start,end, attributes) %>%
   dplyr::rename(chrom = seqid) %>% 
-  dplyr::select(chrom, start, end) %>% 
+  dplyr::select(chrom, start, end, attributes) %>% 
   dplyr::filter(chrom != "MtDNA")
 
 MAF_thresh <- round(0.05 * 141)
@@ -615,11 +616,11 @@ n2_genes_dt <- as.data.table(n2_genes_plt)
 setkey(svs_dt, chrom, start, end)
 setkey(n2_genes_dt, chrom, start, end)
 
-svs_inCodingRegions <- data.table::foverlaps(x = svs_dt, y = n2_genes_dt, type = "any") %>% dplyr::filter(!is.na(start)) %>% dplyr::mutate(overlap = T)
+svs_inCodingRegions <- data.table::foverlaps(x = svs_dt, y = n2_genes_dt, type = "any") %>% dplyr::mutate(overlap = ifelse(!is.na(start), TRUE, FALSE))
 
 
 # Ensuring that the foverlaps command worked correctly
-test <- svs_inCodingRegions %>% dplyr::filter(start > 1600000 & end < 1700000) %>% dplyr::select(chrom,start,end) %>% dplyr::distinct(chrom,start,end)
+test <- svs_inCodingRegions %>% dplyr::filter(overlap == T) %>% dplyr::filter(start > 1600000 & end < 1700000) %>% dplyr::select(chrom,start,end) %>% dplyr::distinct(chrom,start,end)
 
 check <- ggplot(svs_inCodingRegions %>% dplyr::filter(start > 1600000 & end < 1700000)) +
   geom_rect(data = test, aes(xmin = start / 1e6, xmax = end /1e6, ymin = 0, ymax = 0.99, fill = "N2_genes")) +
@@ -636,12 +637,11 @@ check <- ggplot(svs_inCodingRegions %>% dplyr::filter(start > 1600000 & end < 17
     strip.text = element_text(size = 16, color = "black")) 
 check
 
-
-overlap <- svs_inCodingRegions %>% dplyr::select(chrom, i.start,i.end, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
+overlap <- svs_inCodingRegions %>% dplyr::select(chrom, i.start,i.end, attributes, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
 
 final_stats <- maf_filt %>% 
   dplyr::left_join(overlap, by = c("chrom", "start", "end", "sv_type")) %>% 
-  dplyr::mutate(region = ifelse(is.na(overlap.y),'non-PC_region','overlaps_PCgene')) %>%
+  dplyr::mutate(region = ifelse(overlap.y == FALSE,'non-PC_region','overlaps_PCgene')) %>%
   dplyr::select(chrom,start,end,sv_type,region) %>%
   dplyr::group_by(sv_type) %>%
   dplyr::mutate(total_sv_type = n()) %>%
@@ -650,49 +650,56 @@ final_stats <- maf_filt %>%
   dplyr::mutate(region_count = n()) %>%
   dplyr::ungroup()
 
+gene_prop <- svs_inCodingRegions %>% dplyr::mutate(n2_total = 19972) %>%
+  dplyr::filter(!is.na(start)) %>%
+  dplyr::group_by(sv_type) %>%
+  dplyr::mutate(n_n2_genes = length(unique(attributes)),
+                prop = (n_n2_genes / n2_total) * 100) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(sv_type, n2_total, n_n2_genes, prop) %>%
+  dplyr::mutate(region = "overlaps_PCgene")
+
 plt_stats <- final_stats %>% dplyr::select(sv_type,region,total_sv_type,region_count) %>%
-  dplyr::mutate(proportion = (region_count / total_sv_type) * 100) %>%
+  dplyr::left_join(gene_prop, by = c("sv_type", "region")) %>%
   dplyr::distinct() %>%
-  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV")))
+  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV"))) %>%
+  dplyr::group_by(sv_type) %>%
+  dplyr::mutate(prop = ifelse(is.na(prop), 100 - lag(prop), prop)) %>%
+  dplyr::ungroup()
 
 sv_gene_overlap <- ggplot() +
-  geom_bar(data = plt_stats, aes(x = sv_type, y = proportion, fill = region), stat = "identity") +
-  geom_text(data = plt_stats, aes(x = sv_type, y = proportion, label = region_count, group = region), position = position_stack(vjust = 0.5),color = "white", size = 4) +
-  scale_fill_manual(values = c("overlaps_PCgene" = "red", "non-PC_region" = "gray40")) +
-  labs(y = "Proportion (%)", fill = "Region") +
+  geom_bar(data = plt_stats, aes(x = sv_type, y = prop, fill = region), stat = "identity") +
+  geom_text(data = plt_stats, aes(x = sv_type, y = prop, label = region_count, group = region), position = position_stack(vjust = 0.5), color = "white", size = 4) +
+  scale_fill_manual(values = c("overlaps_PCgene" = "red", "non-PC_region" = "gray60")) +
+  labs(y = "Proportion of N2 genes (%)", fill = "Region") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
         panel.grid.major.x = element_blank(),
         axis.title.x = element_blank(),
+        legend.position = 'none',
         axis.text = element_text(size = 10, color = 'black'),
         axis.text.x = element_text(color = 'black', size = 10),
-        axis.title.y = element_text(size = 10, color = 'black')) +
-  guides(color = "none") + # to get rid of legend for the horizontal lines
+        axis.title.y = element_text(size = 12, color = 'black')) +
   scale_y_continuous(expand = c(0,0))
 sv_gene_overlap
-
-# Save the plot:
-ggsave("")
-
-
 
 
 ### Overlap with an N2 gene or 2kb upstream (encompases promoter region)
 twokb_n2_genes_plt <- n2_genes_plt %>% dplyr::mutate(start = start - 2000)
-svs_dt <- as.data.table(maf_filt)
-n2_genes_dt <- as.data.table(twokb_n2_genes_plt)
+svs_dt_2kb <- as.data.table(maf_filt)
+n2_genes_dt_2kb <- as.data.table(twokb_n2_genes_plt)
 
-setkey(svs_dt, chrom, start, end)
-setkey(n2_genes_dt, chrom, start, end)
+setkey(svs_dt_2kb, chrom, start, end)
+setkey(n2_genes_dt_2kb, chrom, start, end)
 
-svs_inCodingRegions <- data.table::foverlaps(x = svs_dt, y = n2_genes_dt, type = "any") %>% dplyr::filter(!is.na(start)) %>% dplyr::mutate(overlap = T)
+svs_inCodingRegions_2kb <- data.table::foverlaps(x = svs_dt_2kb, y = n2_genes_dt_2kb, type = "any") %>% dplyr::mutate(overlap = ifelse(!is.na(start), TRUE, FALSE))
 
-overlap <- svs_inCodingRegions %>% dplyr::select(chrom, i.start,i.end, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
+overlap_2 <- svs_inCodingRegions_2kb %>% dplyr::select(chrom, i.start,i.end, attributes, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
 
-final_stats <- maf_filt %>% 
-  dplyr::left_join(overlap, by = c("chrom", "start", "end", "sv_type")) %>% 
-  dplyr::mutate(region = ifelse(is.na(overlap.y),'non-PC_region','overlaps_PCgene_(plus2kbupstream)')) %>%
+final_stats_2 <- maf_filt %>% 
+  dplyr::left_join(overlap_2, by = c("chrom", "start", "end", "sv_type")) %>% 
+  dplyr::mutate(region = ifelse(overlap.y == FALSE,'non-PC_region','overlaps_PCgene')) %>%
   dplyr::select(chrom,start,end,sv_type,region) %>%
   dplyr::group_by(sv_type) %>%
   dplyr::mutate(total_sv_type = n()) %>%
@@ -701,27 +708,67 @@ final_stats <- maf_filt %>%
   dplyr::mutate(region_count = n()) %>%
   dplyr::ungroup()
 
-plt_stats <- final_stats %>% dplyr::select(sv_type,region,total_sv_type,region_count) %>%
-  dplyr::mutate(proportion = (region_count / total_sv_type) * 100) %>%
+gene_prop_2 <- svs_inCodingRegions_2kb %>% dplyr::mutate(n2_total = 19972) %>%
+  dplyr::filter(!is.na(start)) %>%
+  dplyr::group_by(sv_type) %>%
+  dplyr::mutate(n_n2_genes = length(unique(attributes)),
+                prop = (n_n2_genes / n2_total) * 100) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(sv_type, n2_total, n_n2_genes, prop) %>%
+  dplyr::mutate(region = "overlaps_PCgene")
+
+plt_stats_2 <- final_stats_2 %>% dplyr::select(sv_type,region,total_sv_type,region_count) %>%
+  dplyr::left_join(gene_prop_2, by = c("sv_type", "region")) %>%
   dplyr::distinct() %>%
-  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV")))
+  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV"))) %>%
+  dplyr::group_by(sv_type) %>%
+  dplyr::mutate(prop = ifelse(is.na(prop), 100 - lag(prop), prop)) %>%
+  dplyr::ungroup() %>%
+  dplyr::mutate(region = dplyr::recode(region, overlaps_PCgene = "gene overlap", .default = "non-coding overlap"),
+                region = factor(region, levels = c("non-coding overlap", "gene overlap")))
 
-
-ggplot() +
-  geom_bar(data = plt_stats, aes(x = sv_type, y = proportion, fill = region), stat = "identity") +
-  geom_text(data = plt_stats, aes(x = sv_type, y = proportion, label = region_count, group = region), position = position_stack(vjust = 0.5), color = "white", size = 4, fontface = "bold") +
-  scale_fill_manual(values = c("overlaps_PCgene_(plus2kbupstream)" = "firebrick", "non-PC_region" = "gray60")) +
-  labs(y = "Proportion (%)", fill = "Region") +
+within_2kb <- ggplot() +
+  geom_bar(data = plt_stats_2, aes(x = sv_type, y = prop, fill = region), stat = "identity") +
+  geom_text(data = plt_stats_2, aes(x = sv_type, y = prop, label = region_count, group = region), position = position_stack(vjust = 0.5), color = "white", size = 4) +
+  scale_fill_manual(values = c("gene overlap" = "firebrick", "non-coding overlap" = "gray60")) +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
         panel.grid.major.x = element_blank(),
         axis.title.x = element_blank(),
-        axis.text = element_text(size = 12, color = 'black'),
-        axis.text.x = element_text(color = 'black', size = 12, face = 'bold'),
-        axis.title.y = element_text(size = 14, color = 'black', face = 'bold')) +
-  guides(color = "none") + # to get rid of legend for the horizontal lines
+        plot.margin = margin(l = 20),
+        legend.position = 'none',
+        # legend.text = element_text(size = 10, color = 'black'),
+        # legend.title = element_text(size = 10, color = 'black'),
+        # axis.text.y = element_blank(),
+        axis.text= element_text(color = 'black', size = 10),
+        axis.title.y = element_blank()) +
   scale_y_continuous(expand = c(0,0))
+within_2kb
+
+# Final plot
+final_plt <- cowplot::plot_grid(
+  sv_gene_overlap, within_2kb,
+  nrow = 1,
+  align = "h",
+  labels = c("a","b"))
+final_plt
+
+# Save the plot:
+ggsave("../../figures/supplementary/sv_overlap_genes.png", width = 7.5, height = 7.5, dpi = 600)
+
+
+
+
+
+
+
+
+
+
+#############################################################################
+# What proportion of N2 genome is covered by at least one SV?
+#############################################################################
 
 
 
@@ -739,9 +786,11 @@ ggplot() +
 
 
 
-# ========================================================================================= #
+
+
+#############################################################################
 # PCA of SVs
-# ========================================================================================= #
+#############################################################################
 # Filter for MAF > 0.05
 n <- 141
 maf <- 0.05

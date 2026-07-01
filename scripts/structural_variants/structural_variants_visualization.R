@@ -133,11 +133,10 @@ PCA <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
     axis.title = element_text(size = 11, color = 'black'),
     legend.text = element_text(size = 9, color = 'black'),
     legend.title = element_text(size = 9, color = 'black'),
-    legend.key.width = unit(0.1, "cm"),
-    legend.key.spacing.x = unit(0, "pt"),
+    legend.key.width = unit(0.39, "cm"),
     legend.position = 'top') +
-  labs(color = "Collection location", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"), y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 2), keyheight = unit(0.2, "cm")), keywidth = unit(2, "cm")) 
+  labs(color = "Collection\nlocation", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"), y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
+  guides(color = guide_legend(override.aes = list(size = 2), keyheight = unit(0.2, "cm"))) 
 PCA
 
 
@@ -145,10 +144,11 @@ PCA
 # Create final plot
 final_plt <- cowplot::plot_grid(
   SV_LEN, PCA,
-  rel_widths = c(0.6,1),
+  rel_widths = c(0.5,1),
   nrow = 1,
   labels = c("a","b"))
 final_plt
 
 # Save the plot
 ggsave("../../figures/structural_variants.png", final_plt, width = 7.5, height = 6, dpi = 600)
+
