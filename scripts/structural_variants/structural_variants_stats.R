@@ -6,7 +6,8 @@ library(GenomicRanges)
 library(cowplot)
 
 # Load in all SV calls
-allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter)
+allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>% 
+  dplyr::filter(chrom != "MtDNA")
 
 # Looking at the count of each type of SV across all wild strains
 filt_calls <- allcalls %>% 
@@ -839,6 +840,68 @@ all_collapsed_svs <- plyr::ldply(SVs_collapsed_master, data.frame) %>%
   dplyr::select(-strain)
 
 colnames(all_collapsed_svs) <- c("chrom","start","end")
+
+all_collapsed_svs <- all_collapsed_svs %>% dplyr::mutate(length = end - start)
+
+
+chrom_sizes <- readr::read_tsv("../../data/N2.WS283.cleaned.fa.fai", col_names = c("chrom", "start", "end"))
+arm_domains <- readr::read_csv("../../processed_data/genome_resources/annotation/chromosome_domain_Celegans.csv") %>%
+  dplyr::select(chrom,left,right) %>%
+  dplyr::mutate(left=left*1e3,right=right*1e3) %>%
+  dplyr::left_join(chrom_sizes, by = "chrom")
+
+left_tip <- arm_domains %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::filter(left == min(left))
+
+right_tip <- arm_domains %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::filter(right == max(right))
+
+centers <- arm_domains %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::mutate(start = lag(right),
+                end = lead(left)) %>%
+  dplyr::mutate(start = ifelse(is.na(start),lead(start), start),
+                end = ifelse(is.na(end), lag(end),end)) %>%
+  dplyr::distinct(chrom, start, end)
+
+region_colors <- c("Tip" = "#5E3C99", "Center" = "#FDB863", "Arm" = "#4393C3")
+
+
+# COLOR CHROMOSOME DOMAINS FROM ARMS, CENTERS, AND TIPS
+ggplot(all_collapsed_svs) + 
+  geom_rect(data = arm_domains, aes(xmin = left / 1e6, xmax = right / 1e6, ymin = 0, ymax = 1), fill = '#4393C3') + 
+  geom_rect(data = centers, aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 1), fill = '#FDB863') + 
+  geom_rect(data = left_tip, aes(xmin = 0, xmax = left / 1e6, ymin = 0, ymax = 1), fill = '#5E3C99') +
+  geom_rect(data = right_tip, aes(xmin = right / 1e6, xmax = end / 1e6, ymin = 0, ymax = 1), fill = '#5E3C99') +
+  geom_rect(aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 1), fill = 'black') +
+  facet_wrap(~chrom, nrow = 6, scale = "free_x") +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_rect(color = 'black', fill = NA),
+    strip.text = element_text(size = 22, color = 'black'),
+    axis.text.y = element_blank(),
+    axis.title.y = element_blank(),
+    axis.ticks.y = element_blank(),
+    axis.text.x = element_text(size = 14, color = 'black'),
+    axis.title.x = element_text(size = 16, color = 'black')) +
+  xlab("N2 genome position (Mb)") 
+
+
+arm_domains <- readr::read_csv("../../processed_data/genome_resources/annotation/chromosome_domain_Celegans.csv") %>%
+  dplyr::rename(Chromosome=chrom) %>%
+  dplyr::select(Chromosome,left,right) %>%
+  dplyr::mutate(left=left*1e3,right=right*1e3)
+
+ggplot(data = nHDR_armDomain) +
+  geom_rect(aes(xmin = left / 1e6, xmax = right / 1e6, ymin = 0.5, ymax = 1.5, fill = 'red')) +
+  facet_wrap(~Chromosome, scales = 'free') +
+  theme(
+    legend.position = 'none')
+
+
+
 
 
 

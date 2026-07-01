@@ -18,7 +18,8 @@ library(ggrepel)
 
 ####################################################################################################
 ####################################################################################################
-allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter)
+allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>%
+  dplyr::filter(chrom != "MtDNA")
 
 filt_calls <- allcalls %>% 
   dplyr::mutate(sv_length = abs(sv_length)) %>%
