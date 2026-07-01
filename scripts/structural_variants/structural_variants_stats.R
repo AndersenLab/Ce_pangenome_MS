@@ -199,7 +199,7 @@ ggsave("../../figures/supplementary/largest_PAV_INV.png", largest_PAV_INV, width
 # Are SVs enriched in HDRs??
 #############################################################################
 strains <- allcalls %>% dplyr::select(strain) %>% dplyr::distinct() %>% dplyr::pull()
-hdrs <- readr::read_tsv("../../processed_data/genome_resources/annotation/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain")) %>% 
+hdrs <- readr::read_tsv("../../data/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain")) %>% 
   dplyr::filter(strain %in% strains)
 
 # COLLAPSING HDRS AMONG 140 WSs
@@ -219,13 +219,12 @@ getRegFreq <- function(all_regions) {
     k=1
     j=1
     while (k==1) {
-      print(paste0("chrom:",i,"/iteration:",j))
       checkIntersect <- temp %>%
         dplyr::arrange(CHROM,START) %>%
         dplyr::mutate(check=ifelse(lead(START) <= END,T,F)) %>%
         dplyr::mutate(check=ifelse(is.na(check),F,check))
       
-      #print(nrow(checkIntersect %>% dplyr::filter(check==T)))
+      print(nrow(checkIntersect %>% dplyr::filter(check==T)))
       
       if(nrow(checkIntersect %>% dplyr::filter(check==T)) == 0) {
         print("NO MORE INTERSECTS")
@@ -247,7 +246,8 @@ getRegFreq <- function(all_regions) {
           dplyr::select(-newEnd,-newStart)
         
         retain <- temp %>%
-          dplyr::filter(check==F & lag(check)==F)
+          dplyr::filter(check == FALSE & dplyr::coalesce(dplyr::lag(check), FALSE) == FALSE)
+        # dplyr::filter(check==F & lag(check)==F)
         
         temp <- rbind(collapse,retain) %>%
           dplyr::select(-gid,-check)
@@ -255,6 +255,7 @@ getRegFreq <- function(all_regions) {
         j=j+1
       }
     }
+    print("WRITING TO LIST")
     print(head(temp))
     all_collapsed[[i]] <- temp
   }
@@ -769,16 +770,75 @@ ggsave("../../figures/supplementary/sv_overlap_genes.png", width = 7.5, height =
 #############################################################################
 # What proportion of N2 genome is covered by at least one SV?
 #############################################################################
+# Collapse SVs like how HDRs are collapsed
+all_SVs <- allcalls %>%
+  dplyr::mutate(sv_length = abs(sv_length)) %>%
+  dplyr::mutate(start = pos, 
+                end = start + sv_length) %>%
+  dplyr::select(CHROM = chrom, START = start, END = end, strain) %>%
+  dplyr::arrange(CHROM,START)%>%
+  dplyr::group_split(CHROM)
 
+strain_count <- allcalls %>% dplyr::distinct(strain, .keep_all = T)
+print(nrow(strain_count)) # SHOULD BE 141 (140 WSs and CGC1)
 
+# Collapsing all HDRs
+getRegFreq <- function(all_regions) {
+  all_collapsed <- list()
+  for (i in 1:length(all_regions)) {
+    temp <- all_regions[[i]]
+    k=1
+    j=1
+    while (k==1) {
+      checkIntersect <- temp %>%
+        dplyr::arrange(CHROM,START) %>%
+        dplyr::mutate(check=ifelse(lead(START) <= END,T,F)) %>%
+        dplyr::mutate(check=ifelse(is.na(check),F,check))
+      
+      print(nrow(checkIntersect %>% dplyr::filter(check==T)))
+      
+      if(nrow(checkIntersect %>% dplyr::filter(check==T)) == 0) {
+        print("NO MORE INTERSECTS")
+        k=0
+      } else {
+        
+        temp <- checkIntersect %>%
+          dplyr::mutate(gid=data.table::rleid(check)) %>%
+          dplyr::mutate(gid=ifelse((check==F| is.na(check)) & lag(check)==T,lag(gid),gid))
+        
+        collapse <- temp %>%
+          dplyr::filter(check==T | (check==F & lag(check)==T)) %>%
+          dplyr::group_by(gid) %>%
+          dplyr::mutate(newStart=min(START)) %>%
+          dplyr::mutate(newEnd=max(END)) %>%
+          dplyr::ungroup() %>%
+          dplyr::distinct(gid,.keep_all = T)  %>%
+          dplyr::mutate(START=newStart,END=newEnd) %>%
+          dplyr::select(-newEnd,-newStart)
+        
+        retain <- temp %>%
+          dplyr::filter(check == FALSE & dplyr::coalesce(dplyr::lag(check), FALSE) == FALSE)
+        # dplyr::filter(check==F & lag(check)==F)
+        
+        temp <- rbind(collapse,retain) %>%
+          dplyr::select(-gid,-check)
+        
+        j=j+1
+      }
+    }
+    print("WRITING TO LIST")
+    print(head(temp))
+    all_collapsed[[i]] <- temp
+  }
+  return(all_collapsed)
+}
 
+SVs_collapsed_master <- getRegFreq(all_SVs)
 
+all_collapsed_svs <- plyr::ldply(SVs_collapsed_master, data.frame) %>%
+  dplyr::select(-strain)
 
-
-
-
-
-
+colnames(all_collapsed_svs) <- c("chrom","start","end")
 
 
 

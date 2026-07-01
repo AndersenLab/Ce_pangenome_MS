@@ -56,7 +56,7 @@ SV_LEN <- ggplot() +
         legend.title = element_text(size = 10, color = 'black'),
         legend.box.background = element_rect(color = 'black', fill = NA),
         legend.position = "inside",
-        legend.position.inside = c(0.8,0.2),
+        legend.position.inside = c(0.8,0.111),
         legend.text = element_text(size = 10, color = 'black'),
         axis.title.x = element_text(size = 10, color = 'black')) +
   coord_cartesian(xlim = c(0,13)) +
