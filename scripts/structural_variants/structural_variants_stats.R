@@ -4,6 +4,7 @@ library(dplyr)
 library(data.table)
 library(GenomicRanges)
 library(cowplot)
+library(ggrepel)
 
 # Load in all SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>% 
@@ -870,7 +871,7 @@ region_colors <- c("Tip" = "#5E3C99", "Center" = "#FDB863", "Arm" = "#4393C3")
 
 
 # COLOR CHROMOSOME DOMAINS FROM ARMS, CENTERS, AND TIPS
-ggplot(all_collapsed_svs) + 
+sv_coverge_plt <- ggplot(all_collapsed_svs) + 
   geom_rect(data = arm_domains, aes(xmin = left / 1e6, xmax = right / 1e6, ymin = 0, ymax = 1), fill = '#4393C3') + 
   geom_rect(data = centers, aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 1), fill = '#FDB863') + 
   geom_rect(data = left_tip, aes(xmin = 0, xmax = left / 1e6, ymin = 0, ymax = 1), fill = '#5E3C99') +
@@ -880,30 +881,122 @@ ggplot(all_collapsed_svs) +
   theme(
     panel.background = element_blank(),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 22, color = 'black'),
+    strip.text = element_text(size = 10, color = 'black'),
     axis.text.y = element_blank(),
     axis.title.y = element_blank(),
     axis.ticks.y = element_blank(),
-    axis.text.x = element_text(size = 14, color = 'black'),
-    axis.title.x = element_text(size = 16, color = 'black')) +
-  xlab("N2 genome position (Mb)") 
+    axis.text.x = element_text(size = 10, color = 'black'),
+    axis.title.x = element_text(size = 11, color = 'black')) +
+  xlab("N2 genome position (Mb)") +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0))
+sv_coverge_plt
+
+ggsave("../../figures/supplementary/sv_N2_coverage.png", sv_coverge_plt, width = 7.5, height = 6, dpi = 600)
 
 
-arm_domains <- readr::read_csv("../../processed_data/genome_resources/annotation/chromosome_domain_Celegans.csv") %>%
-  dplyr::rename(Chromosome=chrom) %>%
-  dplyr::select(Chromosome,left,right) %>%
-  dplyr::mutate(left=left*1e3,right=right*1e3)
+# How much of the N2 genome is covered?? 
+sv_coverage <- all_collapsed_svs %>% dplyr::left_join(chrom_sizes, by = "chrom") %>%
+  dplyr::select(chrom, sv_length = length, chrom_size = end.y) %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::mutate(sv_cum_length_chrom = sum(sv_length)) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(chrom, sv_cum_length_chrom, chrom_size) %>%
+  dplyr::mutate(prop_chrom_covered = sv_cum_length_chrom / chrom_size,
+                sv_total_span = sum(sv_cum_length_chrom),
+                n2_genome_size = sum(chrom_size),
+                sv_span_genome = sv_total_span / n2_genome_size)
 
-ggplot(data = nHDR_armDomain) +
-  geom_rect(aes(xmin = left / 1e6, xmax = right / 1e6, ymin = 0.5, ymax = 1.5, fill = 'red')) +
-  facet_wrap(~Chromosome, scales = 'free') +
-  theme(
-    legend.position = 'none')
+# How much of the N2 genomes is covered by at least one DEL:
+all_SVs_DEL <- allcalls %>%
+  dplyr::filter(sv_type == "DEL") %>%
+  dplyr::mutate(sv_length = abs(sv_length)) %>%
+  dplyr::mutate(start = pos, 
+                end = start + sv_length) %>%
+  dplyr::select(CHROM = chrom, START = start, END = end, strain) %>%
+  dplyr::arrange(CHROM,START)%>%
+  dplyr::group_split(CHROM)
+
+DEL_collapsed_master <- getRegFreq(all_SVs_DEL)
+
+all_collapsed_DEL <- plyr::ldply(DEL_collapsed_master, data.frame) %>%
+  dplyr::select(-strain)
+
+colnames(all_collapsed_DEL) <- c("chrom","start","end")
+
+all_collapsed_DEL <- all_collapsed_DEL %>% dplyr::mutate(length = end - start)
+
+sv_DEL_coverage <- all_collapsed_DEL %>% dplyr::left_join(chrom_sizes, by = "chrom") %>%
+  dplyr::select(chrom, sv_length = length, chrom_size = end.y) %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::mutate(sv_cum_length_chrom = sum(sv_length)) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(chrom, sv_cum_length_chrom, chrom_size) %>%
+  dplyr::mutate(prop_chrom_covered = sv_cum_length_chrom / chrom_size,
+                sv_total_span = sum(sv_cum_length_chrom),
+                n2_genome_size = sum(chrom_size),
+                sv_span_genome = sv_total_span / n2_genome_size)
+
+# How much of the N2 genomes is covered by at least one INS:
+all_SVs_INS <- allcalls %>%
+  dplyr::filter(sv_type == "INS") %>%
+  dplyr::mutate(sv_length = abs(sv_length)) %>%
+  dplyr::mutate(start = pos, 
+                end = start + sv_length) %>%
+  dplyr::select(CHROM = chrom, START = start, END = end, strain) %>%
+  dplyr::arrange(CHROM,START)%>%
+  dplyr::group_split(CHROM)
+
+INS_collapsed_master <- getRegFreq(all_SVs_INS)
+
+all_collapsed_INS <- plyr::ldply(INS_collapsed_master, data.frame) %>%
+  dplyr::select(-strain)
+
+colnames(all_collapsed_INS) <- c("chrom","start","end")
+
+all_collapsed_INS <- all_collapsed_INS %>% dplyr::mutate(length = end - start)
+
+sv_INS_coverage <- all_collapsed_INS %>% dplyr::left_join(chrom_sizes, by = "chrom") %>%
+  dplyr::select(chrom, sv_length = length, chrom_size = end.y) %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::mutate(sv_cum_length_chrom = sum(sv_length)) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(chrom, sv_cum_length_chrom, chrom_size) %>%
+  dplyr::mutate(prop_chrom_covered = sv_cum_length_chrom / chrom_size,
+                sv_total_span = sum(sv_cum_length_chrom),
+                n2_genome_size = sum(chrom_size),
+                sv_span_genome = sv_total_span / n2_genome_size)
 
 
+# How much of the N2 genomes is covered by at least one INV:
+all_SVs_INV <- allcalls %>%
+  dplyr::filter(sv_type == "INV") %>%
+  dplyr::mutate(sv_length = abs(sv_length)) %>%
+  dplyr::mutate(start = pos, 
+                end = start + sv_length) %>%
+  dplyr::select(CHROM = chrom, START = start, END = end, strain) %>%
+  dplyr::arrange(CHROM,START)%>%
+  dplyr::group_split(CHROM)
 
+INV_collapsed_master <- getRegFreq(all_SVs_INV)
 
+all_collapsed_INV <- plyr::ldply(INV_collapsed_master, data.frame) %>%
+  dplyr::select(-strain)
 
+colnames(all_collapsed_INV) <- c("chrom","start","end")
+
+all_collapsed_INV <- all_collapsed_INV %>% dplyr::mutate(length = end - start)
+
+sv_INV_coverage <- all_collapsed_INV %>% dplyr::left_join(chrom_sizes, by = "chrom") %>%
+  dplyr::select(chrom, sv_length = length, chrom_size = end.y) %>%
+  dplyr::group_by(chrom) %>%
+  dplyr::mutate(sv_cum_length_chrom = sum(sv_length)) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(chrom, sv_cum_length_chrom, chrom_size) %>%
+  dplyr::mutate(prop_chrom_covered = sv_cum_length_chrom / chrom_size,
+                sv_total_span = sum(sv_cum_length_chrom),
+                n2_genome_size = sum(chrom_size),
+                sv_span_genome = sv_total_span / n2_genome_size)
 
 
 
@@ -914,6 +1007,17 @@ ggplot(data = nHDR_armDomain) +
 #############################################################################
 # PCA of SVs
 #############################################################################
+geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")
+hawaii_islands <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo_hawaii_islands.tsv") %>% dplyr::select(isotype,collection_island_Hawaii)
+WSs <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::rename(strain = Strain) %>% dplyr::pull()
+
+# Adding Hawaiian island resolution
+geo <- geo_initial %>%
+  dplyr::left_join(hawaii_islands, by = "isotype") %>%
+  dplyr::mutate(geo = ifelse(geo == "Hawaii",collection_island_Hawaii,geo)) %>%
+  dplyr::select(isotype, lat, long, geo) %>%
+  dplyr::filter(isotype %in% WSs)
+
 # Filter for MAF > 0.05
 n <- 141
 maf <- 0.05
@@ -944,61 +1048,60 @@ pca_df <- pca_df %>%
   dplyr::left_join(strain_geo, by = "strain") %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
-geo.colors <- c("Big Island"="#66C2A5", "Molokai" = "black", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "pink", "Africa"="green", "North America" = "purple", "Europe" = "#E41A1C", "Atlantic" = "blue", 
+geo.colors <- c("Big Island"="black", "Molokai" = "#66C2A5", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "purple", "Africa"="green", "North America" = "pink", "Europe" = "#E41A1C", "Atlantic" = "blue",
                 "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
 
 pca_df <- pca_df %>%
   mutate(label = ifelse(PC2 > 50, strain, NA))
 
-ggplot(pca_df, aes(PC1, PC2, color = geo)) +
-  geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
-  geom_point(size = 3, alpha = 0.8) +
+all_sv_pca <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
+  # geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
+  geom_point(size = 1, alpha = 0.8) +
   scale_color_manual(values = geo.colors) +
   theme_bw() +
   theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+    axis.text = element_text(size = 10, color = 'black'),
+    axis.title = element_text(size = 10, color = 'black'),
+    legend.position = 'none',
+    plot.title = element_text(size = 11, color = 'black', hjust = 0.5)) +
   labs(color = "Collection location",title = "All SVs", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"),y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
   guides(color = guide_legend(override.aes = list(size = 7))) 
 
 
-dim(sv_mat_t)
-summary(rowSums(sv_mat_t))
-cor(rowSums(sv_mat_t), sv_pca$x[,1])  # PC1 is 93% correlated with number of SVs per strain
+# dim(sv_mat_t)
+# summary(rowSums(sv_mat_t))
+# cor(rowSums(sv_mat_t), sv_pca$x[,1])  # PC1 is 93% correlated with number of SVs per strain
 
 
-# PC3/4
-ggplot(pca_df, aes(PC3, PC4, color = geo)) +
-  geom_point(size = 3, alpha = 0.8) +
-  scale_color_manual(values = geo.colors) +
-  theme_bw() +
-  theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
-  labs(color = "Collection location",title = "All SVs", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 7))) 
-
-# Scree plot:
-scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
-
-ggplot(scree[1:10,], aes(PC, variance * 100)) +
-  geom_col(fill = "black") +
-  theme(
-    axis.text = element_text(size = 16, color = 'black'),
-    panel.background = element_blank(),
-    plot.margin = margin(10,10,10,10),
-    panel.border = element_rect(color = 'black', fill = NA),
-    axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
-  scale_y_continuous(expand = c(0,0))+
-  scale_x_continuous(breaks = 1:10) +
-  coord_cartesian(ylim = c(0,16)) +
-  labs(y = "Proportion of variance explained (%)", x = "Principal component")
+# # PC3/4
+# ggplot(pca_df, aes(PC3, PC4, color = geo)) +
+#   geom_point(size = 3, alpha = 0.8) +
+#   scale_color_manual(values = geo.colors) +
+#   theme_bw() +
+#   theme(
+#     axis.text = element_text(size = 12, color = 'black'),
+#     axis.title = element_text(size = 12, color = 'black', face = 'bold'),
+#     legend.text = element_text(size = 14, color = 'black'),
+#     legend.title = element_text(size = 14, color = 'black'),
+#     plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+#   labs(color = "Collection location",title = "All SVs", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
+#   guides(color = guide_legend(override.aes = list(size = 7))) 
+# 
+# # Scree plot:
+# scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
+# 
+# ggplot(scree[1:10,], aes(PC, variance * 100)) +
+#   geom_col(fill = "black") +
+#   theme(
+#     axis.text = element_text(size = 16, color = 'black'),
+#     panel.background = element_blank(),
+#     plot.margin = margin(10,10,10,10),
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
+#   scale_y_continuous(expand = c(0,0))+
+#   scale_x_continuous(breaks = 1:10) +
+#   coord_cartesian(ylim = c(0,16)) +
+#   labs(y = "Proportion of variance explained (%)", x = "Principal component")
 
 
 ### DELETIONS ###
@@ -1025,56 +1128,52 @@ pca_df <- pca_df %>%
   dplyr::left_join(strain_geo, by = "strain") %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
-geo.colors <- c("Big Island"="#66C2A5", "Molokai" = "black", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "pink", "Africa"="green", "North America" = "purple", "Europe" = "#E41A1C", "Atlantic" = "blue", 
-                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
-
 pca_df <- pca_df %>%
   mutate(label = ifelse(PC2 > 50, strain, NA))
 
-ggplot(pca_df, aes(PC1, PC2, color = geo)) +
-  geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
-  geom_point(size = 3, alpha = 0.8) +
+del_sv_pca <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
+  # geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
+  geom_point(size = 1, alpha = 0.8) +
   scale_color_manual(values = geo.colors) +
   theme_bw() +
   theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+    axis.text = element_text(size = 10, color = 'black'),
+    axis.title = element_text(size = 10, color = 'black'),
+    legend.position = 'none',
+    plot.title = element_text(size = 11, color = 'black', hjust = 0.5)) +
   labs(color = "Collection location",title = "Deletions", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"),y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
   guides(color = guide_legend(override.aes = list(size = 7))) 
 
 
-# PC3/4
-ggplot(pca_df, aes(PC3, PC4, color = geo)) +
-  geom_point(size = 3, alpha = 0.8) +
-  scale_color_manual(values = geo.colors) +
-  theme_bw() +
-  theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
-  labs(color = "Collection location",title = "Deletions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 7))) 
-
-# Scree plot:
-scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
-
-ggplot(scree[1:10,], aes(PC, variance * 100)) +
-  geom_col(fill = "red") +
-  theme(
-    axis.text = element_text(size = 16, color = 'black'),
-    panel.background = element_blank(),
-    plot.margin = margin(10,10,10,10),
-    panel.border = element_rect(color = 'black', fill = NA),
-    axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
-  scale_y_continuous(expand = c(0,0))+
-  scale_x_continuous(breaks = 1:10) +
-  coord_cartesian(ylim = c(0,16)) +
-  labs(y = "Proportion of variance explained (%)", x = "Principal component")
+# # PC3/4
+# ggplot(pca_df, aes(PC3, PC4, color = geo)) +
+#   geom_point(size = 3, alpha = 0.8) +
+#   scale_color_manual(values = geo.colors) +
+#   theme_bw() +
+#   theme(
+#     axis.text = element_text(size = 12, color = 'black'),
+#     axis.title = element_text(size = 12, color = 'black'),
+#     legend.text = element_text(size = 14, color = 'black'),
+#     legend.title = element_text(size = 14, color = 'black'),
+#     plot.title = element_text(size = 16, color = 'black', hjust = 0.5)) +
+#   labs(color = "Collection location",title = "Deletions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
+#   guides(color = guide_legend(override.aes = list(size = 7))) 
+# 
+# # Scree plot:
+# scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
+# 
+# ggplot(scree[1:10,], aes(PC, variance * 100)) +
+#   geom_col(fill = "red") +
+#   theme(
+#     axis.text = element_text(size = 16, color = 'black'),
+#     panel.background = element_blank(),
+#     plot.margin = margin(10,10,10,10),
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
+#   scale_y_continuous(expand = c(0,0))+
+#   scale_x_continuous(breaks = 1:10) +
+#   coord_cartesian(ylim = c(0,16)) +
+#   labs(y = "Proportion of variance explained (%)", x = "Principal component")
 
 
 
@@ -1105,56 +1204,52 @@ pca_df <- pca_df %>%
   dplyr::left_join(strain_geo, by = "strain") %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
-geo.colors <- c("Big Island"="#66C2A5", "Molokai" = "black", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "pink", "Africa"="green", "North America" = "purple", "Europe" = "#E41A1C", "Atlantic" = "blue", 
-                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
-
 pca_df <- pca_df %>%
   mutate(label = ifelse(PC2 > 50, strain, NA))
 
-ggplot(pca_df, aes(PC1, PC2, color = geo)) +
-  geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
-  geom_point(size = 3, alpha = 0.8) +
+ins_sv_pca <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
+  # geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
+  geom_point(size = 1, alpha = 0.8) +
   scale_color_manual(values = geo.colors) +
   theme_bw() +
   theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+    axis.text = element_text(size = 10, color = 'black'),
+    axis.title = element_text(size = 10, color = 'black'),
+    legend.position = 'none',
+    plot.title = element_text(size = 11, color = 'black', hjust = 0.5)) +
   labs(color = "Collection location", title = "Insertions", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"),y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
   guides(color = guide_legend(override.aes = list(size = 7))) 
 
 
-# PC3/4
-ggplot(pca_df, aes(PC3, PC4, color = geo)) +
-  geom_point(size = 3, alpha = 0.8) +
-  scale_color_manual(values = geo.colors) +
-  theme_bw() +
-  theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
-  labs(color = "Collection location",title = "Insertions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 7))) 
-
-# Scree plot:
-scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
-
-ggplot(scree[1:10,], aes(PC, variance * 100)) +
-  geom_col(fill = "blue") +
-  theme(
-    axis.text = element_text(size = 16, color = 'black'),
-    panel.background = element_blank(),
-    plot.margin = margin(10,10,10,10),
-    panel.border = element_rect(color = 'black', fill = NA),
-    axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
-  scale_y_continuous(expand = c(0,0))+
-  scale_x_continuous(breaks = 1:10) +
-  coord_cartesian(ylim = c(0,17)) +
-  labs(y = "Proportion of variance explained (%)", x = "Principal component")
+# # PC3/4
+# ggplot(pca_df, aes(PC3, PC4, color = geo)) +
+#   geom_point(size = 3, alpha = 0.8) +
+#   scale_color_manual(values = geo.colors) +
+#   theme_bw() +
+#   theme(
+#     axis.text = element_text(size = 12, color = 'black'),
+#     axis.title = element_text(size = 12, color = 'black'),
+#     legend.text = element_text(size = 14, color = 'black'),
+#     legend.title = element_text(size = 14, color = 'black'),
+#     plot.title = element_text(size = 16, color = 'black', hjust = 0.5)) +
+#   labs(color = "Collection location",title = "Insertions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
+#   guides(color = guide_legend(override.aes = list(size = 7))) 
+# 
+# # Scree plot:
+# scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
+# 
+# ggplot(scree[1:10,], aes(PC, variance * 100)) +
+#   geom_col(fill = "blue") +
+#   theme(
+#     axis.text = element_text(size = 16, color = 'black'),
+#     panel.background = element_blank(),
+#     plot.margin = margin(10,10,10,10),
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
+#   scale_y_continuous(expand = c(0,0))+
+#   scale_x_continuous(breaks = 1:10) +
+#   coord_cartesian(ylim = c(0,17)) +
+#   labs(y = "Proportion of variance explained (%)", x = "Principal component")
 
 
 
@@ -1183,450 +1278,67 @@ pca_df <- pca_df %>%
   dplyr::left_join(strain_geo, by = "strain") %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
-geo.colors <- c("Big Island"="#66C2A5", "Molokai" = "black", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "pink", "Africa"="green", "North America" = "purple", "Europe" = "#E41A1C", "Atlantic" = "blue", 
-                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
-
 pca_df <- pca_df %>%
   mutate(label = ifelse(PC2 > 5, strain, NA))
 
-ggplot(pca_df, aes(PC1, PC2, color = geo)) +
-  geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
-  geom_point(size = 3, alpha = 0.8) +
+inv_sv_pca <-ggplot(pca_df, aes(PC1, PC2, color = geo)) +
+  # geom_text_repel(aes(label = label), size = 4, max.overlaps = Inf, show.legend = FALSE) +
+  geom_point(size = 1, alpha = 0.8) +
   scale_color_manual(values = geo.colors) +
   theme_bw() +
   theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+    axis.text = element_text(size = 10, color = 'black'),
+    axis.title = element_text(size = 10, color = 'black'),
+    legend.position = 'none',
+    plot.title = element_text(size = 11, color = 'black', hjust = 0.5)) +
   labs(color = "Collection location",title = "Inversions", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"),y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)")) +
   guides(color = guide_legend(override.aes = list(size = 7))) 
 
 
-# PC3/4
-ggplot(pca_df, aes(PC3, PC4, color = geo)) +
-  geom_point(size = 3, alpha = 0.8) +
-  scale_color_manual(values = geo.colors) +
-  theme_bw() +
-  theme(
-    axis.text = element_text(size = 12, color = 'black'),
-    axis.title = element_text(size = 12, color = 'black', face = 'bold'),
-    legend.text = element_text(size = 14, color = 'black'),
-    legend.title = element_text(size = 14, color = 'black'),
-    plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
-  labs(color = "Collection location",title = "Inversions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 7))) 
-
-# Scree plot:
-scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
-
-ggplot(scree[1:10,], aes(PC, variance * 100)) +
-  geom_col(fill = "gold") +
-  theme(
-    axis.text = element_text(size = 16, color = 'black'),
-    panel.background = element_blank(),
-    plot.margin = margin(10,10,10,10),
-    panel.border = element_rect(color = 'black', fill = NA),
-    axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
-  scale_y_continuous(expand = c(0,0))+
-  scale_x_continuous(breaks = 1:10) +
-  coord_cartesian(ylim = c(0,16)) +
-  labs(y = "Proportion of variance explained (%)", x = "Principal component")
-
-
+# # PC3/4
+# ggplot(pca_df, aes(PC3, PC4, color = geo)) +
+#   geom_point(size = 3, alpha = 0.8) +
+#   scale_color_manual(values = geo.colors) +
+#   theme_bw() +
+#   theme(
+#     axis.text = element_text(size = 12, color = 'black'),
+#     axis.title = element_text(size = 12, color = 'black', face = 'bold'),
+#     legend.text = element_text(size = 14, color = 'black'),
+#     legend.title = element_text(size = 14, color = 'black'),
+#     plot.title = element_text(size = 16, color = 'black', face = 'bold', hjust = 0.5)) +
+#   labs(color = "Collection location",title = "Inversions", x = paste0("PC3 (", round(100 * summary(sv_pca)$importance[2,3], 1), "%)"),y = paste0("PC4 (", round(100 * summary(sv_pca)$importance[2,4], 1), "%)"))+
+#   guides(color = guide_legend(override.aes = list(size = 7))) 
+# 
+# # Scree plot:
+# scree <- data.frame(PC = seq_along(sv_pca$sdev),variance = sv_pca$sdev^2 / sum(sv_pca$sdev^2))
+# 
+# ggplot(scree[1:10,], aes(PC, variance * 100)) +
+#   geom_col(fill = "gold") +
+#   theme(
+#     axis.text = element_text(size = 16, color = 'black'),
+#     panel.background = element_blank(),
+#     plot.margin = margin(10,10,10,10),
+#     panel.border = element_rect(color = 'black', fill = NA),
+#     axis.title = element_text(size = 16, color = 'black', face = 'bold')) +
+#   scale_y_continuous(expand = c(0,0))+
+#   scale_x_continuous(breaks = 1:10) +
+#   coord_cartesian(ylim = c(0,16)) +
+#   labs(y = "Proportion of variance explained (%)", x = "Principal component")
 
 
 
 
 
 
+# Looking at structure when SVs are broke out by type
+PCA_sv_type <- cowplot::plot_grid(
+  all_sv_pca, del_sv_pca, ins_sv_pca, inv_sv_pca,
+  nrow = 2,
+  align = "vh",
+  labels = c("a","b","c","d")
+)
+PCA_sv_type
 
 
+ggsave("../../figures/supplementary/sv_pca_bySVtype.png", PCA_sv_type, width = 7.5, height = 7.5, dpi = 600)
 
-
-
-
-
-
-
-
-# 
-# ####################################################################################################
-# ####################################################################################################
-# 
-# # CIRCOS PLOT
-# 
-# ####################################################################################################
-# ####################################################################################################
-# snps <- readr::read_tsv("../../processed_data/genome_resources/genome_data/140WSs_biallelicSNPs.tsv", col_names = c("chrom","pos","ref","alt")) 
-# merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_merged_SVs.tsv")
-# 
-# # Outer ring of chromosomes (gene map of gene models represented with black rectangles)
-# ## Chromosome IDs and sizes (start is always equal to zero)
-# chr_order <- c("I","II","III","IV","V","X")
-# chrom_sizes <- readr::read_tsv("../../data/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
-#   dplyr::mutate(chrom = factor(chrom, levels = chr_order)) %>%
-#   dplyr::mutate(chrom = as.character(chrom))
-# 
-# ## N2 gene modesl in BED format
-# n2_genes_bed <- n2_genes_plt %>% dplyr::filter(chrom != "MtDNA") %>%
-#   transmute(chrom = as.character(chrom), start = as.numeric(start), end = as.numeric(end))
-# 
-# gene_bin_size <- 50000L
-# 
-# # one row per chr with lengths
-# chr_len_df <- chrom_sizes %>%
-#   dplyr::filter(chrom %in% chr_order) %>%
-#   dplyr::transmute(chrom = as.character(chrom), chr_len = as.numeric(end)) %>%
-#   dplyr::distinct()
-# 
-# # bins that cover the entire chromosome, including the last partial bin
-# gene_bins <- chr_len_df %>%
-#   dplyr::group_by(chrom) %>%
-#   dplyr::do({
-#     L <- .$chr_len[1]
-#     starts <- seq(0, L, by = gene_bin_size)  # include L so last bin is created
-#     tibble(
-#       chrom = .$chrom[1],
-#       start = starts[-length(starts)],
-#       end   = pmin(starts[-1], L)
-#     )
-#   }) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::mutate(mid = (start + end)/2)
-# 
-# # overlap-count genes per bin
-# bins_dt  <- as.data.table(gene_bins)
-# genes_dt <- as.data.table(n2_genes_bed)  # chrom/start/end already numeric in your code
-# 
-# setkey(bins_dt,  chrom, start, end)
-# setkey(genes_dt, chrom, start, end)
-# 
-# ov <- foverlaps(genes_dt, bins_dt, nomatch = 0)
-# 
-# gene_counts <- ov[, .(gene_count = .N), by = .(chrom, start, end, mid)]
-# 
-# bins_gene <- merge(bins_dt, gene_counts, by = c("chrom","start","end","mid"), all.x = TRUE)
-# bins_gene[is.na(gene_count), gene_count := 0]
-# 
-# gene_bins_50kb <- as.data.frame(bins_gene) %>%
-#   dplyr::rename(pos = mid, value = gene_count)
-# 
-# gene_ylim <- c(0, max(gene_bins_50kb$value, na.rm = TRUE))
-# 
-# # Next ring in will have SNV count per kb (plot fitted LOESS line?) 
-# ## SNV count in table: "chrom", "bin", "variant_count"
-# bin_size <- 1000L
-# 
-# bins <- chrom_sizes %>%
-#   dplyr::group_by(chrom) %>%
-#   dplyr::do({
-#     chr_len <- .$end[1]
-#     starts <- seq(0, chr_len - 1, by = bin_size)
-#     tibble(
-#       chrom = .$chrom[1],
-#       start = starts,
-#       end   = pmin(starts + bin_size, chr_len)
-#     )
-#   }) %>%
-#   dplyr::ungroup()
-# 
-# bins_dt <- as.data.table(bins)
-# setkey(bins_dt, chrom, start, end)
-# bins_dt[, id := .I]
-# 
-# snps_counts <- snps %>%
-#   dplyr::select(-ref,-alt) %>%
-#   dplyr::filter(chrom %in% chr_order) %>%
-#   dplyr::mutate(
-#     chrom = as.character(chrom),
-#     start = (pos %/% bin_size) * bin_size,
-#     end   = start + bin_size) %>%
-#   dplyr::count(chrom, start, end, name = "variant_count")
-# 
-# snps_dt <- as.data.table(snps_counts)
-# setkey(snps_dt, chrom, start, end)
-# 
-# bins_snp <- merge(bins_dt, snps_dt, by = c("chrom","start","end"), all.x = TRUE)
-# bins_snp[is.na(variant_count), variant_count := 0]
-# snps_per_bin <- as.data.frame(bins_snp) %>%
-#   dplyr::mutate(pos = (start + end)/2) %>%
-#   dplyr::select(chrom,pos,variant_count) %>% dplyr::rename(value = variant_count)
-# 
-# # Next ring in will plot DEL frequncy (plotted as LOESS line) - make sure CGC1 is filtered out
-# ## DEL calls with "chrom", "middle" (of the 1 kb bin), and "freq"
-# # Calculating DEL frequency
-# # bins <- snps %>% dplyr::select(chrom, bin)%>% dplyr::group_by(chrom) %>% dplyr::mutate(binEnd = lead(bin)) %>% dplyr::slice(-dplyr::n()) %>% dplyr::ungroup() %>% dplyr::rename(start = bin, end = binEnd)
-# bins_dt <- as.data.table(bins)
-# bins_dt[, id := .I]  # optional: keep track of bins
-# 
-# del_calls <- filt_calls %>% dplyr::filter(sv_type == "DEL", strain != "CGC1") %>% dplyr::mutate(end = pos + sv_length) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
-# del_calls_dt <- as.data.table(del_calls)
-# 
-# setkey(bins_dt, chrom, start, end)
-# setkey(del_calls_dt, chrom, start, end)
-# 
-# overlaps <- data.table::foverlaps(del_calls_dt, bins_dt, nomatch = 0)
-# 
-# # Count unique strains per bin
-# counts_PB <- overlaps[, .(n_strains = uniqueN(strain)), by = .(chrom, start, end)]
-# 
-# # If you want to merge with the full bin list (including 0s):
-# bins_wCounts <- merge(bins_dt, counts_PB, by = c("chrom", "start", "end"), all.x = TRUE)
-# bins_wCounts[is.na(n_strains), n_strains := 0]
-# 
-# bins_wFreq <- as.data.frame(bins_wCounts) %>%
-#   dplyr::mutate(freq = n_strains/141) #change me to number of isotypes
-# 
-# del_bin_plt <- bins_wFreq %>% dplyr::mutate(middle = (end + start) / 2)
-# 
-# del_bin_freq <- del_bin_plt %>% dplyr::select(chrom, middle, freq)
-# 
-# # Next ring in will plot INS frequency (plotted as LOESS line) - make sure CGC1 is filtered out
-# ## INS calls with "chrom", "middle" (of the 1 kb bin), and "freq"
-# bins_dt <- as.data.table(bins)
-# bins_dt[, id := .I]  # optional: keep track of bins
-# 
-# ins_calls <- filt_calls %>% dplyr::filter(sv_type == "INS", strain != "CGC1") %>% dplyr::mutate(end = pos + sv_length) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
-# ins_calls_dt <- as.data.table(ins_calls)
-# 
-# setkey(bins_dt, chrom, start, end)
-# setkey(ins_calls_dt, chrom, start, end)
-# 
-# overlaps <- data.table::foverlaps(ins_calls_dt, bins_dt, nomatch = 0)
-# 
-# # Count unique strains per bin
-# counts_PB <- overlaps[, .(n_strains = uniqueN(strain)), by = .(chrom, start, end)]
-# 
-# # If you want to merge with the full bin list (including 0s):
-# bins_wCounts <- merge(bins_dt, counts_PB, by = c("chrom", "start", "end"), all.x = TRUE)
-# bins_wCounts[is.na(n_strains), n_strains := 0]
-# 
-# bins_wFreq <- as.data.frame(bins_wCounts) %>%
-#   dplyr::mutate(freq = n_strains/141) #change me to number of isotypes
-# 
-# ins_bin_plt <- bins_wFreq %>% dplyr::mutate(middle = (end + start) / 2)
-# 
-# ins_bin_freq <- ins_bin_plt %>% dplyr::select(chrom, middle, freq)
-# 
-# # Then the final, more inner ring will have INV frequency (plotted as LOESS line) - make sure CGC1 is filtered out
-# ## INV calls with "chrom", "middle" (of the 1 kb bin), and "freq"
-# bins_dt <- as.data.table(bins)
-# bins_dt[, id := .I]  # optional: keep track of bins
-# 
-# inv_calls <- filt_calls %>% dplyr::filter(sv_type == "INV", strain != "CGC1") %>% dplyr::mutate(end = pos + sv_length) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
-# inv_calls_dt <- as.data.table(inv_calls)
-# 
-# setkey(bins_dt, chrom, start, end)
-# setkey(inv_calls_dt, chrom, start, end)
-# 
-# overlaps <- data.table::foverlaps(inv_calls_dt, bins_dt, nomatch = 0)
-# 
-# # Count unique strains per bin
-# counts_PB <- overlaps[, .(n_strains = uniqueN(strain)), by = .(chrom, start, end)]
-# 
-# # If you want to merge with the full bin list (including 0s):
-# bins_wCounts <- merge(bins_dt, counts_PB, by = c("chrom", "start", "end"), all.x = TRUE)
-# bins_wCounts[is.na(n_strains), n_strains := 0]
-# 
-# bins_wFreq <- as.data.frame(bins_wCounts) %>%
-#   dplyr::mutate(freq = n_strains/141) #change me to number of isotypes
-# 
-# inv_bin_plt <- bins_wFreq %>% dplyr::mutate(middle = (end + start) / 2)
-# 
-# inv_bin_freq <- inv_bin_plt %>% dplyr::select(chrom, middle, freq)
-# 
-# 
-# ## =========================
-# ##  Plotting!
-# ## ========================= 
-# # SV frequency tracks must have: chrom, pos, value
-# del_bin_freq <- del_bin_freq %>%
-#   transmute(chrom = as.character(chrom), pos = as.numeric(middle), value = as.numeric(freq))
-# 
-# ins_bin_freq <- ins_bin_freq %>%
-#   transmute(chrom = as.character(chrom), pos = as.numeric(middle), value = as.numeric(freq))
-# 
-# inv_bin_freq <- inv_bin_freq %>%
-#   transmute(chrom = as.character(chrom), pos = as.numeric(middle), value = as.numeric(freq))
-# 
-# add_rect_track <- function(bed, col, track_height = 0.08, label = NULL) {
-#   circos.trackPlotRegion(
-#     ylim = c(0, 1),
-#     track.height = track_height,
-#     bg.border = NA,
-#     panel.fun = function(x, y) {
-#       chr <- CELL_META$sector.index
-#       d <- bed[bed$chrom == chr, , drop = FALSE]
-#       if (nrow(d) == 0) return()
-#       circos.rect(d$start, 0, d$end, 1, col = col, border = NA)
-#     }
-#   )
-#   
-#   if (!is.null(label)) {
-#     circos.text(
-#       x = 0, y = 0.5, labels = label,
-#       sector.index = chr_order[1],
-#       track.index  = get.current.track.index(),
-#       facing = "inside", adj = c(1, 0.5), cex = 0.7
-#     )
-#   }
-# }
-# 
-# add_value_track <- function(df, col, ylim, track_height = 0.10, label = NULL,
-#                             type = c("line","points"), add_loess = FALSE, span = 0.2) {
-#   type <- match.arg(type)
-#   
-#   circos.trackPlotRegion(
-#     ylim = ylim,
-#     track.height = track_height,
-#     bg.border = NA,
-#     panel.fun = function(x, y) {
-#       chr <- CELL_META$sector.index
-#       d <- df[df$chrom == chr, , drop = FALSE]
-#       if (nrow(d) == 0) return()
-#       
-#       d <- d[order(d$pos), , drop = FALSE]
-#       
-#       if (type == "points") {
-#         circos.points(d$pos, d$value, pch = 16, cex = 0.25, col = col)
-#       } else {
-#         circos.lines(d$pos, d$value, col = col, lwd = 1)
-#       }
-#       
-#       if (add_loess && nrow(d) >= 50) {
-#         fit <- stats::loess(value ~ pos, data = d, span = span)
-#         xs  <- d$pos
-#         ys  <- stats::predict(fit, newdata = data.frame(pos = xs))
-#         ok  <- is.finite(ys)
-#         if (any(ok)) circos.lines(xs[ok], ys[ok], col = col, lwd = 2)
-#       }
-#     }
-#   )
-#   
-#   if (!is.null(label)) {
-#     circos.text(
-#       x = 0, y = mean(ylim), labels = label,
-#       sector.index = chr_order[1],
-#       track.index  = get.current.track.index(),
-#       facing = "inside", adj = c(1, 0.5), cex = 0.7
-#     )
-#   }
-# }
-# 
-# add_filled_area_track <- function(df, col_fill = "#00BFC480", col_line = "#00BFC4",
-#                                   ylim, track_height = 0.10, label = NULL) {
-#   circos.trackPlotRegion(
-#     ylim = ylim,
-#     track.height = track_height,
-#     bg.border = NA,
-#     panel.fun = function(x, y) {
-#       chr <- CELL_META$sector.index
-#       d <- df[df$chrom == chr, , drop = FALSE]
-#       if (nrow(d) < 2) return()
-#       d <- d[order(d$pos), , drop = FALSE]
-#       
-#       # build polygon (baseline at ylim[1])
-#       x_poly <- c(d$pos, rev(d$pos))
-#       y_poly <- c(d$value, rep(ylim[1], nrow(d)))
-#       
-#       circos.polygon(x_poly, y_poly, col = col_fill, border = NA)
-#       circos.lines(d$pos, d$value, col = col_line, lwd = 1.2)
-#     }
-#   )
-#   
-#   if (!is.null(label)) {
-#     circos.text(
-#       x = 0, y = mean(ylim), labels = label,
-#       sector.index = chr_order[1],
-#       track.index  = get.current.track.index(),
-#       facing = "inside", adj = c(1, 0.5), cex = 0.7
-#     )
-#   }
-# }
-# 
-# 
-# png("circos_plot.png", width = 3.75, height = 3.75, units = "in", res = 600, bg = "white")
-# 
-# circos.clear()
-# circos.par(track.margin = c(0.002, 0.002), cell.padding = c(0, 0, 0, 0), canvas.xlim = c(-0.9, 0.9), canvas.ylim = c(-0.99,0.99)) # start.degree = 86, gap.after = c(rep(2, length(chr_order)-1), 8)
-# circos.initialize(factors = as.character(chrom_sizes$chrom), xlim = cbind(rep(0, nrow(chrom_sizes)), chrom_sizes$end))
-# 
-# # Outer ideogram-like ring + gene models inside it
-# circos.trackPlotRegion(
-#   ylim = c(0, 1),
-#   track.height = 0.02,
-#   bg.border = NA,
-#   panel.fun = function(x, y) {
-#     chr <- CELL_META$sector.index
-#     xlim <- CELL_META$xlim
-#     
-#     # background chromosome band
-#     circos.rect(xlim[1], 0, xlim[2], 1, col = "grey90", border = "black")
-#     # gene models as black rectangles (thin band)
-#     # g <- n2_genes_bed[n2_genes_bed$chrom == chr, , drop = FALSE]
-#     # if (nrow(g) > 0) {
-#     #   circos.rect(g$start, 0, g$end, 1, col = "black", border = NA)}
-#     
-#     # gene density (50 kb bins) as cyan-blue line
-#     # gd <- gene_density_50kb[gene_density_50kb$chrom == chr, , drop = FALSE]
-#     # if (nrow(gd) > 1) {
-#     #   gd <- gd[order(gd$pos), , drop = FALSE]
-#     #   
-#     #   # rescale density to fit nicely within the outer track band
-#     #   y <- (gd$value - gene_ylim[1]) / (gene_ylim[2] - gene_ylim[1] + 1e-9)
-#     #   y <- 0.10 + y * 0.80   # occupy 10%..90% of the track height
-#     #   
-#     #   circos.lines(gd$pos, y, col = "#00BFC4", lwd = 2)
-#     # }
-#     
-#     
-#     
-#     # chromosome label
-#     circos.text(CELL_META$xcenter, 3.3, chr, facing = "bending.outside", niceFacing = T, cex = 1.5, font = 2)
-#     # axis ticks
-#     circos.axis(h = "top", major.at = seq(0, xlim[2], by = 5e6),labels = seq(0, xlim[2], by = 5e6) / 1e6, labels.cex = 1, major.tick.length = 0.001)
-#   }
-# )
-# 
-# 
-# snp_ylim <- c(0, max(snps_per_bin$value, na.rm = TRUE))
-# add_value_track(snps_per_bin, col = "#DB6333", ylim = snp_ylim, track_height = 0.2, type = "line", add_loess = FALSE, span = 0.2)
-# add_value_track(del_bin_freq, col = "red",  ylim = c(0, 1), track_height = 0.2, type = "line", add_loess = FALSE, span = 0.2)
-# add_value_track(ins_bin_freq, col = "blue", ylim = c(0, 1), track_height = 0.2, type = "line", add_loess = FALSE, span = 0.2)
-# add_value_track(inv_bin_freq, col = "gold3", ylim = c(0, 1), track_height = 0.2, type = "line", add_loess = FALSE, span = 0.2)
-# 
-# # Legend
-# lgd <- Legend(labels = c("SNPs/kb","DEL freq.","INS freq.","INV freq."),
-#               type = "lines", legend_gp = gpar(col = c("#DB6333","red","blue","gold3"),
-#                                                lwd = c(3, 3, 3, 3)),
-#               labels_gp = gpar(fontsize = 10),
-#               title_gp  = gpar(fontsize = 10))
-# 
-# draw(lgd, x = unit(0.99, "npc"), y = unit(0.99, "npc"), just = c("right", "top"))
-# 
-# circos.clear()
-# 
-# dev.off()
-# 
-# CIRC <- ggdraw() + draw_image("circos_plot.png")
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
