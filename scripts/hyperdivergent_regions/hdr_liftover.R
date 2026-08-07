@@ -535,6 +535,19 @@ hdr_liftover_size
 # Save supplementary figure
 # ggsave("../../figures/supplementary/hdr_liftover_size_comparison.png", hdr_liftover_size, width = 7.5, height = 7.5, dpi = 600 )
 
+# What is the distribution in size difference between N2 HDRs and their lifted-over size??
+hdr_diff <- WS_HDRs %>%
+  dplyr::select(strain, longest_contig, minStart, maxEnd, divSize, chrom, hdr_start_extended, hdr_end_extended, og_divSize, sizeDiff) %>%
+  dplyr::mutate(size_ratio = ifelse(divSize <= og_divSize, 1 - (divSize / og_divSize), 1- (og_divSize / divSize))) %>% # 21,306 HDRs
+  dplyr::filter(size_ratio <=0.05) # 2,273
+
+
+ggplot(hdr_diff) +
+  geom_histogram(aes(x = size_ratio), fill = 'orange', binwidth = 0.01) +
+  theme_classic() +
+  scale_x_continuous(expand = c(0,0)) +
+  scale_y_continuous(expand = c(0,0))
+
 
 # Find WS HDR clusters separated by less than 5kb
 gap_clust_WS_HDRs <- WS_HDRs %>%
