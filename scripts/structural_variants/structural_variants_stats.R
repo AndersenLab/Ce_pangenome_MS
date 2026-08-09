@@ -775,6 +775,7 @@ ggsave("../../figures/supplementary/sv_overlap_genes.png", width = 7.5, height =
 # Collapse SVs like how HDRs are collapsed
 all_SVs <- allcalls %>%
   dplyr::mutate(sv_length = abs(sv_length)) %>%
+  dplyr::filter(sv_type != "INS") %>% # only collapsing DELs and INVs because INSs are only a single position
   dplyr::mutate(start = pos, 
                 end = start + sv_length) %>%
   dplyr::select(CHROM = chrom, START = start, END = end, strain) %>%
