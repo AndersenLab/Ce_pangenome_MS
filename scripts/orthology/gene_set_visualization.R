@@ -102,7 +102,7 @@ write.table(all_OGs, "../../tables/all_OGs_matrix.tsv", col.names = T, row.names
 
 
 # Plotting OG gnee set histogram
-private_freq = (1/(length(strainCol_c2_u)))
+private_freq <- (1/(length(strainCol_c2_u)))
 
 classification <- all_relations %>%
   dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>%
@@ -418,7 +418,16 @@ p_strip <- ggplot(og_strip, aes(x = Orthogroup, y = 1, fill = class), alpha = 0.
 tree_file <- "../../processed_data/genome_resources/trees/BUSCO_supermatrix.fa.contree"
 busco_tree <- read.tree(tree_file)
 busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
-strain_order_tree <- busco_tree$tip.label
+p_tree <- ggtree(busco_tree_scaled)
+
+# Extract the plot data
+tree_data <- p_tree$data
+
+# Filter to tips only and sort by y position
+strain_order_tree <- tree_data %>%
+  dplyr::filter(isTip == TRUE) %>%
+  dplyr::arrange(y) %>%
+  dplyr::pull(label)
 
 # Double check to make sure strain ordering is the same in the matrix and on the tree leaves
 setdiff(strain_order_tree, unique(pav_long$strain)) 
@@ -434,32 +443,41 @@ p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = str
     axis.ticks.x = element_blank(),
     panel.grid = element_blank(),
     panel.border = element_rect(color = "black", fill = NA),
-    axis.text.y = element_text(size = 3, color = "black"),
+    axis.text.y = element_blank(),
     axis.title.x = element_text(color = "black", size = 12),
     axis.title.y = element_blank(),
-    plot.margin = margin(t = 0, r = 0, b = , l = -1)) +
+    plot.margin = margin(t = 0, r = 0, b = 10, l = -5)) +
   scale_y_discrete(expand = c(0, 0)) 
 
-p_tree <- ggtree(busco_tree_scaled) +
+p_tree <- ggtree(busco_tree_scaled, linewidth = 0.2) +
   scale_y_continuous(breaks = seq_along(strain_order_tree), expand = c(0, 2)) +
   theme(
     axis.text = element_blank(),
     axis.ticks = element_blank(),
     panel.grid = element_blank(),
     axis.title = element_blank(),
-    plot.margin = margin(22, 0, 15, 5))
-p_tree
+    plot.margin = margin(t = 22, r = 0, b = 15, l = 5)) #+
+  # geom_tiplab(size = 1, align = TRUE, linesize = 0.2, color = 'black')
+
+PAV_OG_matrix <- cowplot::plot_grid(
+  p_tree,
+  p_heat,
+  ncol = 2,
+  rel_widths = c(0.2, 1),
+  align = "h")
+PAV_OG_matrix
+
 
 
 PAV_OG_matrix <- cowplot::plot_grid(
   p_tree,
   p_strip / p_heat + patchwork::plot_layout(heights = c(0.04, 1)),
   ncol = 2,
-  rel_widths = c(0.12, 1),
+  rel_widths = c(0.2, 1),
   axis = "tb")
 
 # Save the plot!
-# ggsave("../../figures/supplementary/PAV_OG_matrix.png", PAV_OG_matrix, width = 7.5, height = 6, dpi = 600)
+ggsave("../../figures/supplementary/PAV_OG_matrix.png", PAV_OG_matrix, width = 7.5, height = 6, dpi = 600)
 
 
 
