@@ -443,10 +443,10 @@ p_heat <- ggplot(pav_long %>% dplyr::mutate(strain = factor(strain, levels = str
     axis.ticks.x = element_blank(),
     panel.grid = element_blank(),
     panel.border = element_rect(color = "black", fill = NA),
-    axis.text.y = element_blank(),
+    axis.text.y = element_text(size = 3, color = "black"),
     axis.title.x = element_text(color = "black", size = 12),
     axis.title.y = element_blank(),
-    plot.margin = margin(t = 0, r = 0, b = 10, l = -5)) +
+    plot.margin = margin(t = 0, r = 0, b = , l = -1)) +
   scale_y_discrete(expand = c(0, 0)) 
 
 p_tree <- ggtree(busco_tree_scaled, linewidth = 0.2) +
@@ -456,28 +456,19 @@ p_tree <- ggtree(busco_tree_scaled, linewidth = 0.2) +
     axis.ticks = element_blank(),
     panel.grid = element_blank(),
     axis.title = element_blank(),
-    plot.margin = margin(t = 22, r = 0, b = 15, l = 5)) #+
-  # geom_tiplab(size = 1, align = TRUE, linesize = 0.2, color = 'black')
-
-PAV_OG_matrix <- cowplot::plot_grid(
-  p_tree,
-  p_heat,
-  ncol = 2,
-  rel_widths = c(0.2, 1),
-  align = "h")
-PAV_OG_matrix
-
+    plot.margin = margin(22, 0, 15, 5))
+# p_tree
 
 
 PAV_OG_matrix <- cowplot::plot_grid(
   p_tree,
   p_strip / p_heat + patchwork::plot_layout(heights = c(0.04, 1)),
   ncol = 2,
-  rel_widths = c(0.2, 1),
+  rel_widths = c(0.12, 1),
   axis = "tb")
 
 # Save the plot!
-ggsave("../../figures/supplementary/PAV_OG_matrix.png", PAV_OG_matrix, width = 7.5, height = 6, dpi = 600)
+# ggsave("../../figures/supplementary/PAV_OG_matrix.png", PAV_OG_matrix, width = 7.5, height = 6, dpi = 600)
 
 
 
