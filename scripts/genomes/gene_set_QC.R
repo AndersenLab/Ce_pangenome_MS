@@ -94,6 +94,9 @@ n2 <- ggplot(nonRefGenes_long_n2, aes(x = metric, y = count)) +
     axis.text.x = element_text(size = 9, color = 'black')) +
   coord_cartesian(ylim = c(800,5500))
 
+# How many non-N2 genes on average?
+av_non_N2 <- nonRefGenes_long_n2 %>% dplyr::filter(metric == "nonN2_genes") %>% dplyr::summarize(mean_nonN2 = mean(count))
+
 # Looking at the proportion in each gene set
 OG_vector_N2 <- unique(unlist(OG_list))
 
@@ -224,3 +227,117 @@ all_plt <- cowplot::plot_grid(
 all_plt
 
 ggsave("../../figures/supplementary/gene_model_QC.png", all_plt, width = 7.5, height = 7.5, dpi = 600)
+
+
+#######################################################################################################################################
+### Looking at N2-specific genes that are not found in any wild strains
+#######################################################################################################################################
+names_all <- colnames(all_relations %>% dplyr::select(-N2, -Orthogroup))
+
+refgenes = as.data.frame(matrix(ncol = 3, nrow = 141))
+colnames(refgenes) <- c("strain","N2_specific_genes",'N2_specific_Orthogroups')
+
+OG_list <- list()
+
+for (i in 1:length(names_all)) {
+  soi <- names_all[i]
+  print(paste0("On strain: ", soi, ". ", i, "/142."))
+  
+  refgenes[i,1] = soi
+  
+  non_ref <- all_relations %>% dplyr::select(N2, .data[[soi]]) %>% dplyr::filter(!is.na(N2) & is.na(.data[[soi]])) %>% dplyr::select(N2) %>% sum(na.rm = TRUE) 
+  
+  refgenes[i,2] = non_ref
+  
+  non_ref_og_count <- all_relations %>% dplyr::select(N2, .data[[soi]]) %>% dplyr::filter(!is.na(N2) & is.na(.data[[soi]])) %>% nrow()
+  non_ref_og <- all_relations %>% dplyr::select(Orthogroup, N2, .data[[soi]]) %>% dplyr::filter(!is.na(N2) & is.na(.data[[soi]])) %>% dplyr::pull(Orthogroup)
+  OG_list[[i]] <- non_ref_og
+  
+  refgenes[i,3] = non_ref_og_count
+  
+}
+
+nonRefGenes_long <- refgenes %>%
+  pivot_longer(
+    cols = c(N2_specific_genes, N2_specific_Orthogroups),
+    names_to = "metric",
+    values_to = "count")
+
+label_df_top <- nonRefGenes_long %>%
+  dplyr::filter(metric == "N2_specific_genes")  %>% 
+  dplyr::arrange(desc(count)) %>% dplyr::slice_head(n = 10)
+
+label_df_bottom <- nonRefGenes_long %>%
+  dplyr::filter(metric == "N2_specific_genes") %>% 
+  dplyr::arrange(count) %>% dplyr::slice_head(n = 10)
+
+labels_df <- label_df_top %>% dplyr::bind_rows(label_df_bottom)
+
+n2_spec <- ggplot(nonRefGenes_long, aes(x = metric, y = count)) +
+  geom_boxplot(aes(fill = metric), outlier.size = 0.6, width = 0.7, outlier.shape = NA, alpha = 0.5) +
+  geom_line(aes(group = strain), alpha = 0.3) +
+  geom_point(aes(group = strain),size = 1.5, alpha = 0.6) +
+  geom_text_repel(data = labels_df, aes(label = strain), size = 3, max.overlaps = 100) +
+  labs(y = "Count") +
+  scale_fill_manual(values = c("N2_specific_genes" = "orange", "N2_specific_Orthogroups" = "#DB6333")) +
+  theme(
+    panel.background = element_blank(),
+    legend.position = "none",
+    panel.border = element_rect(color = 'black', fill = NA),
+    axis.title.x = element_blank(),
+    axis.title.y = element_text(size = 12, color = 'black'),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.text.x = element_text(size = 12, color = 'black')) 
+n2_spec
+
+# Looking at proprotion in each gene set
+OG_vector_N2_spec <- unique(unlist(OG_list))
+
+OG_classes_spec <- all_relations %>%
+  dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>%
+  dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
+  dplyr::mutate(freq = (sum / 143)) %>%
+  dplyr::mutate(
+    class = case_when(
+      freq == 1 ~ "core",
+      freq > private_freq & freq < 1 ~ "accessory",
+      freq == private_freq ~ "private",
+      TRUE ~ "undefined"
+    )
+  ) %>% dplyr::select(Orthogroup, class) %>%
+  dplyr::filter(Orthogroup %in% OG_vector_N2_spec)
+
+OG_propN2_spec <- OG_classes_spec %>%
+  dplyr::count(class, name = "class_count") %>%
+  dplyr::mutate(prop = class_count / sum(class_count) * 100) %>%
+  dplyr::mutate(class = factor(class, levels = c("accessory", "core", "private"))) %>%
+  dplyr::mutate(source = "N2")
+
+n2_spec_prop <- ggplot(OG_propN2_spec, aes(x = prop, y = "", fill = class)) +
+  geom_col(position = "stack", width = 0.5, color = "black") +
+  scale_fill_manual(values = c("accessory" = "#DB6333", "private" = "magenta3", "core" = "green4")) +
+  labs(x = "Proportion (%)", y = NULL, fill = "Gene set") +
+  theme(
+    panel.background = element_blank(),
+    legend.position = "none",
+    panel.border = element_rect(color = 'black', fill = NA),
+    axis.title.x = element_text(size = 11, color = 'black'),
+    axis.ticks.y = element_blank(),
+    axis.title.y = element_text(size = 12, color = 'black'),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.text.x = element_text(size = 10, color = 'black')) 
+
+n2_specific_genes <- cowplot::plot_grid(
+  n2_spec, n2_spec_prop,
+  nrow = 2,
+  rel_heights = c(6,1))
+n2_specific_genes
+
+# On average, how many N2-specific genes does N2 have?
+av_N2_spec <- nonRefGenes_long %>% dplyr::filter(metric == "N2_specific_genes") %>% dplyr::summarize(mean_n2_spec = mean(count))
+
+ggsave("../../figures/supplementary/N2_specific_gene_model_QC.png", n2_specific_genes, width = 7.5, height = 7.5, dpi = 600)
+
+
+
+
