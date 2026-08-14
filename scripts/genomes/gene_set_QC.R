@@ -329,15 +329,13 @@ n2_spec_prop <- ggplot(OG_propN2_spec, aes(x = prop, y = "", fill = class)) +
 
 n2_specific_genes <- cowplot::plot_grid(
   n2_spec, n2_spec_prop,
+  align = 'v',
   nrow = 2,
-  rel_heights = c(6,1))
+  rel_heights = c(6,1),
+  labels = c("a","b"))
 n2_specific_genes
 
 # On average, how many N2-specific genes does N2 have?
 av_N2_spec <- nonRefGenes_long %>% dplyr::filter(metric == "N2_specific_genes") %>% dplyr::summarize(mean_n2_spec = mean(count))
 
 ggsave("../../figures/supplementary/N2_specific_gene_model_QC.png", n2_specific_genes, width = 7.5, height = 7.5, dpi = 600)
-
-
-
-

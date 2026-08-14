@@ -4,6 +4,9 @@ library(ggplot2)
 library(stringr)
 library(cowplot)
 library(ggtree)
+library(pheatmap)
+library(grid)
+library(ggplotify)
 
 # ======================================================================================================================================================================================== #
 # Load in orthogroup matrix and classify gene sets
@@ -35,24 +38,24 @@ pav_mat <- og_matrix %>% dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .
   dplyr::select(-sum) %>%
   dplyr::mutate(Orthogroup = factor(Orthogroup, levels = unique(Orthogroup)))
 
-pav_long <- pav_mat %>%
-  tidyr::pivot_longer(
-    cols = all_of(strainCol_c2_u),
-    names_to = "strain",
-    values_to = "presence") %>%
-  dplyr::mutate(
-    class_presence = case_when(
-      presence == 1 ~ paste0(class, "_present"),
-      presence == 0 ~ paste0(class, "_absent"))) %>%
-  dplyr::group_by(strain,class) %>%
-  dplyr::mutate(class_count=sum(presence)) %>%
-  dplyr::ungroup() 
-
-strain_order_acc <- pav_long %>%
-  dplyr::filter(class=="accessory") %>%
-  dplyr::arrange(class_count) %>%
-  dplyr::distinct(strain,.keep_all = T) %>%
-  dplyr::pull(strain) 
+# pav_long <- pav_mat %>%
+#   tidyr::pivot_longer(
+#     cols = all_of(strainCol_c2_u),
+#     names_to = "strain",
+#     values_to = "presence") %>%
+#   dplyr::mutate(
+#     class_presence = case_when(
+#       presence == 1 ~ paste0(class, "_present"),
+#       presence == 0 ~ paste0(class, "_absent"))) %>%
+#   dplyr::group_by(strain,class) %>%
+#   dplyr::mutate(class_count=sum(presence)) %>%
+#   dplyr::ungroup() 
+# 
+# strain_order_acc <- pav_long %>%
+#   dplyr::filter(class=="accessory") %>%
+#   dplyr::arrange(class_count) %>%
+#   dplyr::distinct(strain,.keep_all = T) %>%
+#   dplyr::pull(strain) 
 
 # ======================================================================================================================================================================================== #
 # Prepare matrix for gheatmap - needs to be a matrix with rownames = tip labels
@@ -106,7 +109,7 @@ heatmap_all <- gheatmap(
   ) +
   theme(legend.position = "none",
         panel.border = element_rect(color = 'black', fill = NA))
-# heatmap_all
+heatmap_all
 
 
 # Colored bars above OGs indicating gene set classification
@@ -144,7 +147,7 @@ final_heatmap_all <- cowplot::plot_grid(
   align = "h") + theme(panel.background = element_rect(fill = "white", color = NA))
 # final_heatmap_all
 
-ggsave("../../figures/supplementary/PAV_OG_matrix.png", final_heatmap_all, width = 7.5, height = 6, dpi = 600)
+# ggsave("../../figures/supplementary/PAV_OG_matrix.png", final_heatmap_all, width = 7.5, height = 6, dpi = 600)
 
 
 # 
@@ -222,23 +225,155 @@ ggsave("../../figures/supplementary/PAV_OG_matrix.png", final_heatmap_all, width
 #   # color = "black")
 #   # scale_fill_manual(values = c("0" = "white", "1" = "black"), guide = "none")
 # heatmap_all
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
+
+
+
+
+
+
+
+
+
+
+# Trying with pheatmap 
+# Get strain order from tree (visual order, top to bottom)
+strain_order_by_y <- ggtree(busco_tree_scaled)$data %>%
+  dplyr::filter(isTip) %>%
+  dplyr::arrange(desc(y)) %>%
+  dplyr::pull(label)
+
+# Reorder matrix rows to match tree order
+pav_matrix_ordered <- pav_matrix_for_gheatmap[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (gene class)
+# ======================================================================================================================================================================================== #
+
+col_annotation <- pav_mat %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# Ensure order matches matrix columns
+col_annotation <- col_annotation[colnames(pav_matrix_ordered), , drop = FALSE]
+
+# Define annotation colors
+ann_colors <- list(class = c("core" = "green4", "accessory" = "#DB6333", "private" = "magenta3"))
+
+
+# ======================================================================================================================================================================================== #
+# Combine pheatmap with ggtree
+# ======================================================================================================================================================================================== #
+
+# Create the tree plot matching pheatmap row order
+p_tree <- ggtree(busco_tree_scaled) 
+# Method 1: Save pheatmap and combine externally
+p_heatmap <- pheatmap(
+  pav_matrix_ordered,
+  cluster_rows = FALSE,          # Don't cluster - keep tree order
+  cluster_cols = FALSE,          # Don't cluster - keep core/accessory/private order
+  show_rownames = TRUE,
+  show_colnames = FALSE,         # Too many OGs to show
+  color = c("white", "black"),   # Absent = white, Present = black
+  border_color = NA,             # No cell borders
+  annotation_col = col_annotation,
+  annotation_colors = ann_colors,
+  fontsize_row = 5,
+  annotation_legend = FALSE,
+  annotation_names_col = FALSE,
+  legend = FALSE)
+
+# Convert to ggplot object
+p_heatmap_gg <- ggplotify::as.ggplot(p_heatmap)
+
+# Combine with cowplot
+cowplot::plot_grid(
+  p_tree,
+  p_heatmap_gg,
+  ncol = 2,
+  rel_widths = c(0.2, 0.8),
+  align = "v",
+  axis = "tb")
+
+
+
+
+
+
+
+
+
+
+
+library(ape)
+library(stats)
+
+# Method 1: Using ape::as.hclust (if tree is ultrametric)
+# First check if tree is ultrametric
+is.ultrametric(busco_tree_scaled)
+
+# If TRUE, direct conversion works:
+tree_hclust <- as.hclust(busco_tree_scaled)
+
+# If FALSE, make it ultrametric first:
+busco_tree_ultra <- ape::chronos(busco_tree_scaled)  # Or use chronopl()
+tree_hclust <- as.hclust(busco_tree_ultra)
+
+# ======================================================================================================================================================================================== #
+# Method 2: Using Grafen's method (you already did this)
+# ======================================================================================================================================================================================== #
+
+# compute.brlen with Grafen makes the tree ultrametric
+busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
+is.ultrametric(busco_tree_scaled)  # Should be TRUE
+
+tree_hclust <- as.hclust(busco_tree_scaled)
+
+# ======================================================================================================================================================================================== #
+# Use in pheatmap
+# ======================================================================================================================================================================================== #
+
+pheatmap(
+  pav_matrix_for_gheatmap,         # Use original matrix - pheatmap will reorder
+  cluster_rows = tree_hclust,      # Your tree as hclust object!
+  cluster_cols = FALSE,
+  show_rownames = TRUE,
+  show_colnames = FALSE,
+  color = c("white", "black"),
+  border_color = NA,
+  annotation_col = col_annotation,
+  annotation_colors = ann_colors,
+  fontsize_row = 5,
+  legend = FALSE,
+  annotation_legend = FALSE,
+  treeheight_row = 100             # Adjust tree height (in pixels)
+)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ 
 # # ======================================================================================================================================================================================== #
 # # Looking at GPCR clustering
 # # ======================================================================================================================================================================================== #
