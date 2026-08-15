@@ -1,12 +1,9 @@
 library(readr)
 library(dplyr)
 library(ggplot2)
-library(stringr)
-library(cowplot)
 library(ggtree)
-library(pheatmap)
+library(ComplexHeatmap)
 library(grid)
-library(ggplotify)
 
 # ======================================================================================================================================================================================== #
 # Load in orthogroup matrix and classify gene sets
@@ -38,25 +35,6 @@ pav_mat <- og_matrix %>% dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .
   dplyr::select(-sum) %>%
   dplyr::mutate(Orthogroup = factor(Orthogroup, levels = unique(Orthogroup)))
 
-# pav_long <- pav_mat %>%
-#   tidyr::pivot_longer(
-#     cols = all_of(strainCol_c2_u),
-#     names_to = "strain",
-#     values_to = "presence") %>%
-#   dplyr::mutate(
-#     class_presence = case_when(
-#       presence == 1 ~ paste0(class, "_present"),
-#       presence == 0 ~ paste0(class, "_absent"))) %>%
-#   dplyr::group_by(strain,class) %>%
-#   dplyr::mutate(class_count=sum(presence)) %>%
-#   dplyr::ungroup() 
-# 
-# strain_order_acc <- pav_long %>%
-#   dplyr::filter(class=="accessory") %>%
-#   dplyr::arrange(class_count) %>%
-#   dplyr::distinct(strain,.keep_all = T) %>%
-#   dplyr::pull(strain) 
-
 # ======================================================================================================================================================================================== #
 # Prepare matrix for gheatmap - needs to be a matrix with rownames = tip labels
 # ======================================================================================================================================================================================== #
@@ -79,163 +57,9 @@ tree_file <- "../../processed_data/genome_resources/trees/BUSCO_supermatrix.fa.c
 busco_tree <- read.tree(tree_file)
 busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
 
-# Verify strain matching
-setdiff(busco_tree$tip.label, rownames(pav_matrix_for_gheatmap)) 
-setdiff(rownames(pav_matrix_for_gheatmap), busco_tree$tip.label)
-
 # ======================================================================================================================================================================================== #
-# Create plot with gheatmap
+# Order strains according to BUSCO-inferred phylogeny
 # ======================================================================================================================================================================================== #
-
-# Base tree
-p_tree <- ggtree(busco_tree_scaled) + 
-  geom_tiplab(size = 1, align = TRUE, linesize = 0.2, color = 'black')
-
-# Fix 1: Correct color mapping (low = absent = white, high = present = black)
-heatmap_all <- gheatmap(
-  p_tree, 
-  pav_matrix_for_gheatmap,
-  offset = 0.15,              
-  width = 3,                 
-  colnames = FALSE,
-  color = NA,
-  low = "white",             # 0 = absent = white
-  high = "black"             # 1 = present = black
-) +
-  scale_fill_gradient(
-    low = "white", 
-    high = "black", 
-    guide = "none"
-  ) +
-  theme(legend.position = "none",
-        panel.border = element_rect(color = 'black', fill = NA))
-heatmap_all
-
-
-# Colored bars above OGs indicating gene set classification
-og_strip <- pav_mat %>%
-  dplyr::select(Orthogroup, class) %>%
-  dplyr::distinct() %>%
-  dplyr::mutate(Orthogroup = factor(Orthogroup, levels = og_order))
-
-p_strip <- ggplot(og_strip, aes(x = Orthogroup, y = 1, fill = class), alpha = 0.5) +
-  geom_tile() +
-  scale_fill_manual(values = c(core = "green4", accessory = "#DB6333", private = "magenta3"), guide = "none") +
-  theme_void() +
-  theme(
-    plot.margin = margin(t = 5, r = 5, b = 0, l = 5))
-
-
-
-# Create empty spacer for tree portion
-p_spacer <- ggplot() + theme_void()
-
-# Combine spacer + strip
-p_strip_row <- cowplot::plot_grid(
-  p_spacer,
-  p_strip + theme(legend.position = "none"),
-  ncol = 2,
-  rel_widths = c(0.30, 0.72)  # Adjust these to match your tree/heatmap ratio
-)
-
-# Stack strip on top of gheatmap
-final_heatmap_all <- cowplot::plot_grid(
-  p_strip_row,
-  heatmap_all,
-  ncol = 1,
-  rel_heights = c(0.08, 1),
-  align = "h") + theme(panel.background = element_rect(fill = "white", color = NA))
-# final_heatmap_all
-
-# ggsave("../../figures/supplementary/PAV_OG_matrix.png", final_heatmap_all, width = 7.5, height = 6, dpi = 600)
-
-
-# 
-# 
-# # ---------------------------------------------------------
-# # 2. Read phylogeny
-# # ---------------------------------------------------------
-# 
-# tree_file <- "../../processed_data/genome_resources/trees/BUSCO_supermatrix.fa.contree"
-# 
-# busco_tree <- ape::read.tree(tree_file)
-# 
-# # Optional: make branch lengths more visually uniform
-# # busco_tree_scaled <- ape::compute.brlen(
-# #   busco_tree,
-# #   method = "Grafen"
-# # )
-# 
-# 
-# # ---------------------------------------------------------
-# # 3. Create strain × orthogroup matrix
-# # ---------------------------------------------------------
-# 
-# pav_matrix <- pav_mat %>%
-#   select(-class) %>%
-#   tibble::column_to_rownames("Orthogroup") %>%
-#   t() %>%
-#   as.matrix()
-# 
-# 
-# # Make sure tree and matrix contain exactly the same strains
-# setdiff(busco_tree$tip.label, rownames(pav_matrix))
-# setdiff(rownames(pav_matrix), busco_tree$tip.label)
-# 
-# # Reorder rows to exactly match the phylogeny
-# pav_matrix <- pav_matrix[
-#   busco_tree$tip.label,
-#   ,
-#   drop = FALSE
-# ]
-# 
-# 
-# # ---------------------------------------------------------
-# # 4. Orthogroup classification annotation
-# # ---------------------------------------------------------
-# # og_annotation <- pav_mat %>%
-# #   dplyr::select(Orthogroup, class) %>%
-# #   dplyr::tibble::column_to_rownames("Orthogroup")
-# # 
-# # og_annotation <- og_annotation[
-# #   colnames(pav_matrix),
-# #   ,
-# #   drop = FALSE
-# # ]
-# # 
-# # colnames(og_annotation) <- "Class"
-# 
-# 
-# # ---------------------------------------------------------
-# # 5. Tree + PAV heatmap
-# # ---------------------------------------------------------
-# 
-# p_PAV <- ggtree(busco_tree)
-# 
-# p_PAV$data <- ggtree::fortify(
-#   busco_tree
-# )
-# 
-# heatmap_all <- gheatmap(
-#   p_PAV,
-#   pav_matrix)
-#   # offset = 0.02,
-#   # width = 0.8,
-#   # colnames = FALSE,
-#   # color = "black")
-#   # scale_fill_manual(values = c("0" = "white", "1" = "black"), guide = "none")
-# heatmap_all
-
-
-
-
-
-
-
-
-
-
-# Trying with pheatmap 
 # Get strain order from tree (visual order, top to bottom)
 strain_order_by_y <- ggtree(busco_tree_scaled)$data %>%
   dplyr::filter(isTip) %>%
@@ -249,54 +73,107 @@ pav_matrix_ordered <- pav_matrix_for_gheatmap[strain_order_by_y, ]
 identical(rownames(pav_matrix_ordered), strain_order_by_y)  # Should be TRUE
 
 # ======================================================================================================================================================================================== #
-# Create annotation for columns (gene class)
+# Create annotation for columns (orthogroups)
 # ======================================================================================================================================================================================== #
-
 col_annotation <- pav_mat %>%
   dplyr::select(Orthogroup, class) %>%
   dplyr::distinct() %>%
   tibble::column_to_rownames("Orthogroup")
 
-# Ensure order matches matrix columns
+# OG name matching
 col_annotation <- col_annotation[colnames(pav_matrix_ordered), , drop = FALSE]
-
-# Define annotation colors
 ann_colors <- list(class = c("core" = "green4", "accessory" = "#DB6333", "private" = "magenta3"))
 
+# ======================================================================================================================================================================================== #
+# Create annotation for row (collection site)
+# ======================================================================================================================================================================================== #
+geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")
+hawaii_islands <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo_hawaii_islands.tsv") %>% dplyr::select(isotype,collection_island_Hawaii)
+WSs <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::rename(strain = Strain) %>% dplyr::pull()
+
+# Adding Hawaiian island resolution
+geo <- geo_initial %>%
+  dplyr::left_join(hawaii_islands, by = "isotype") %>%
+  dplyr::mutate(geo = ifelse(geo == "Hawaii",collection_island_Hawaii,geo)) %>%
+  dplyr::select(isotype, lat, long, geo) %>%
+  dplyr::filter(isotype %in% WSs) %>%
+  dplyr::select(strain = isotype, Geo = geo) %>%
+  dplyr::add_row(strain = "N2", Geo = "Europe") %>%
+  dplyr::add_row(strain = "CGC1", Geo = "Europe")
+
+row_annotation <- geo %>%
+  tibble::column_to_rownames("strain")
+
+# Make sure row annotation matches matrix row order
+row_annotation <- row_annotation[rownames(pav_matrix_ordered), , drop = FALSE]
+
+# Check for any missing strains
+setdiff(rownames(pav_matrix_ordered), geo$strain)  # Should be character(0)
 
 # ======================================================================================================================================================================================== #
-# Combine pheatmap with ggtree
+# Combine ALL annotation colors into ONE list
 # ======================================================================================================================================================================================== #
+ann_colors <- list(
+  # Column annotation colors
+  class = c(
+    "core" = "green4", 
+    "accessory" = "#DB6333", 
+    "private" = "magenta3"
+  ),
+  # Row annotation colors
+  Geo = c(
+    "Asia" = "lightblue",
+    "South America" = "forestgreen",
+    "Indian Ocean" = "chocolate",
+    "Big Island" = "black", 
+    "Molokai" = "#66C2A5", 
+    "Maui" = "yellow", 
+    "Oahu" = "brown", 
+    "Kauai" = "purple", 
+    "Africa" = "green", 
+    "North America" = "pink", 
+    "Europe" = "#E41A1C", 
+    "Atlantic" = "blue", 
+    "Oceania" = "cyan", 
+    "unknown" = "gray"))
 
-# Create the tree plot matching pheatmap row order
-p_tree <- ggtree(busco_tree_scaled) 
-# Method 1: Save pheatmap and combine externally
-p_heatmap <- pheatmap(
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha <- HeatmapAnnotation(
+  class = col_annotation$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+# Row annotation (right side)
+row_ha <- ComplexHeatmap::rowAnnotation(
+  Geo = row_annotation$Geo,
+  col = list(Geo = ann_colors$Geo),
+  show_legend = TRUE,
+  show_annotation_name = FALSE,
+  annotation_legend_param = list(
+    Geo = list(
+      title_gp = grid::gpar(fontface = "plain"))))
+
+pav_heatmap <- ComplexHeatmap::Heatmap(
   pav_matrix_ordered,
-  cluster_rows = FALSE,          # Don't cluster - keep tree order
-  cluster_cols = FALSE,          # Don't cluster - keep core/accessory/private order
-  show_rownames = TRUE,
-  show_colnames = FALSE,         # Too many OGs to show
-  color = c("white", "black"),   # Absent = white, Present = black
-  border_color = NA,             # No cell borders
-  annotation_col = col_annotation,
-  annotation_colors = ann_colors,
-  fontsize_row = 5,
-  annotation_legend = FALSE,
-  annotation_names_col = FALSE,
-  legend = FALSE)
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "Orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
 
-# Convert to ggplot object
-p_heatmap_gg <- ggplotify::as.ggplot(p_heatmap)
-
-# Combine with cowplot
-cowplot::plot_grid(
-  p_tree,
-  p_heatmap_gg,
-  ncol = 2,
-  rel_widths = c(0.2, 0.8),
-  align = "v",
-  axis = "tb")
+ComplexHeatmap::draw(pav_heatmap, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
@@ -308,120 +185,372 @@ cowplot::plot_grid(
 
 
 
-library(ape)
-library(stats)
 
-# Method 1: Using ape::as.hclust (if tree is ultrametric)
-# First check if tree is ultrametric
-is.ultrametric(busco_tree_scaled)
 
-# If TRUE, direct conversion works:
-tree_hclust <- as.hclust(busco_tree_scaled)
 
-# If FALSE, make it ultrametric first:
-busco_tree_ultra <- ape::chronos(busco_tree_scaled)  # Or use chronopl()
-tree_hclust <- as.hclust(busco_tree_ultra)
 
 # ======================================================================================================================================================================================== #
-# Method 2: Using Grafen's method (you already did this)
+# Looking at GPCR clustering
 # ======================================================================================================================================================================================== #
+# Load in all genes and the orthogroups they contribute to
+all_genes_ogs <- readr::read_tsv("../../processed_data/orthology/all_genes_class_OGs.tsv")
 
-# compute.brlen with Grafen makes the tree ultrametric
-busco_tree_scaled <- ape::compute.brlen(busco_tree, method = "Grafen")
-is.ultrametric(busco_tree_scaled)  # Should be TRUE
+# Load in GPCR genes among all wild strains
+gpcrs <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_gpcrs.tsv") %>%
+  dplyr::left_join(all_genes_ogs, by = c("strain","gene")) %>% dplyr::select(-class) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
 
-tree_hclust <- as.hclust(busco_tree_scaled)
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_GPCRS <- pav_mat %>% dplyr::filter(Orthogroup %in% gpcrs) 
+
+pav_matrix_for_gheatmap_GPCR <- pav_mat_GPCRS %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_GPCRS %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_GPCR <- pav_matrix_for_gheatmap_GPCR[, og_order]
 
 # ======================================================================================================================================================================================== #
-# Use in pheatmap
+# Order strains according to BUSCO-inferred phylogency
 # ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_GPCRs <- pav_matrix_for_gheatmap_GPCR[strain_order_by_y, ]
 
-pheatmap(
-  pav_matrix_for_gheatmap,         # Use original matrix - pheatmap will reorder
-  cluster_rows = tree_hclust,      # Your tree as hclust object!
-  cluster_cols = FALSE,
-  show_rownames = TRUE,
-  show_colnames = FALSE,
-  color = c("white", "black"),
-  border_color = NA,
-  annotation_col = col_annotation,
-  annotation_colors = ann_colors,
-  fontsize_row = 5,
-  legend = FALSE,
-  annotation_legend = FALSE,
-  treeheight_row = 100             # Adjust tree height (in pixels)
-)
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_GPCRs), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_GPCRs<- pav_mat_GPCRS %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_GPCRs <- col_annotation_GPCRs[colnames(pav_matrix_ordered_GPCRs), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_GPCRs <- HeatmapAnnotation(
+  class = col_annotation_GPCRs$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_GPCRs <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_GPCRs,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_GPCRs,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "GPCR orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_GPCRs, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
 
 
 
+# ======================================================================================================================================================================================== #
+# Looking at F-box clustering
+# ======================================================================================================================================================================================== #
+# Load in GPCR genes among all wild strains
+fbox <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_fBox.tsv") %>%
+  dplyr::left_join(all_genes_ogs, by = c("strain","gene")) %>% dplyr::select(-class) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_FBOX <- pav_mat %>% dplyr::filter(Orthogroup %in% fbox) 
+
+pav_matrix_for_gheatmap_FBOX <- pav_mat_FBOX %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_FBOX %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_FBOX <- pav_matrix_for_gheatmap_FBOX[, og_order]
+
+# ======================================================================================================================================================================================== #
+# Order strains according to BUSCO-inferred phylogency
+# ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_FBOX <- pav_matrix_for_gheatmap_FBOX[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_FBOX), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_FBOX<- pav_mat_FBOX %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_FBOX <- col_annotation_FBOX[colnames(pav_matrix_ordered_FBOX), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_FBOX <- HeatmapAnnotation(
+  class = col_annotation_FBOX$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_FBOX <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_FBOX,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_FBOX,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "F-box orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_FBOX, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
 
 
 
+# ======================================================================================================================================================================================== #
+# Looking at C-type Lectins clustering
+# ======================================================================================================================================================================================== #
+# Load in GPCR genes among all wild strains
+lectins <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_CtypeLectins.tsv") %>%
+  dplyr::left_join(all_genes_ogs, by = c("strain","gene")) %>% dplyr::select(-class) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_CLECTIN <- pav_mat %>% dplyr::filter(Orthogroup %in% lectins) 
+
+pav_matrix_for_gheatmap_CLECTIN <- pav_mat_CLECTIN %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_CLECTIN %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_CLECTIN <- pav_matrix_for_gheatmap_CLECTIN[, og_order]
+
+# ======================================================================================================================================================================================== #
+# Order strains according to BUSCO-inferred phylogency
+# ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_CLECTIN <- pav_matrix_for_gheatmap_CLECTIN[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_CLECTIN), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_CLECTIN<- pav_mat_CLECTIN %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_CLECTIN <- col_annotation_CLECTIN[colnames(pav_matrix_ordered_CLECTIN), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_CLECTIN <- HeatmapAnnotation(
+  class = col_annotation_CLECTIN$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_CLECTIN <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_CLECTIN,
+  cluster_rows = TRUE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_CLECTIN,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "C-type lectin orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_CLECTIN, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
+# ======================================================================================================================================================================================== #
+# Looking at NHR clustering
+# ======================================================================================================================================================================================== #
+# Load in GPCR genes among all wild strains
+nhrs <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_nhr.tsv") %>%
+  dplyr::left_join(all_genes_ogs, by = c("strain","gene")) %>% dplyr::select(-class) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_NHR <- pav_mat %>% dplyr::filter(Orthogroup %in% nhrs) 
+
+pav_matrix_for_gheatmap_NHR <- pav_mat_NHR %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_NHR %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_NHR <- pav_matrix_for_gheatmap_NHR[, og_order]
+
+# ======================================================================================================================================================================================== #
+# Order strains according to BUSCO-inferred phylogency
+# ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_NHR <- pav_matrix_for_gheatmap_NHR[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_NHR), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_NHR<- pav_mat_NHR %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_NHR <- col_annotation_NHR[colnames(pav_matrix_ordered_NHR), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_NHR <- HeatmapAnnotation(
+  class = col_annotation_NHR$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_NHR <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_NHR,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_NHR,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "NHR orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_NHR, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
+# ======================================================================================================================================================================================== #
+# Looking at cytochrome P450s clustering
+# ======================================================================================================================================================================================== #
+# Load in GPCR genes among all wild strains
+cytos <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_cytochromeP450.tsv") %>%
+  dplyr::left_join(all_genes_ogs, by = c("strain","gene")) %>% dplyr::select(-class) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull(Orthogroup)
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_CCYTO <- pav_mat %>% dplyr::filter(Orthogroup %in% cytos) 
+
+pav_matrix_for_gheatmap_CCYTO <- pav_mat_CCYTO %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_CCYTO %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_CCYTO <- pav_matrix_for_gheatmap_CCYTO[, og_order]
+
+# ======================================================================================================================================================================================== #
+# Order strains according to BUSCO-inferred phylogency
+# ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_CCYTO <- pav_matrix_for_gheatmap_CCYTO[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_CCYTO), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_CCYTO<- pav_mat_CCYTO %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_CCYTO <- col_annotation_CCYTO[colnames(pav_matrix_ordered_CCYTO), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_CCYTO <- HeatmapAnnotation(
+  class = col_annotation_CCYTO$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_CCYTO <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_CCYTO,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_CCYTO,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "Cytochrome P450 orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_CCYTO, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
-
- 
-# # ======================================================================================================================================================================================== #
-# # Looking at GPCR clustering
-# # ======================================================================================================================================================================================== #
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
