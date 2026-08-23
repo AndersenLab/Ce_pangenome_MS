@@ -1085,6 +1085,8 @@ n2_all_plt
 ############################################################################################################################################
 ### Which gene family has the most single-copy orthologs in the HDRs in relation to all single-copy orthologs genome-wide for that gene family????
 # Updating function........
+HDR_sc_ogs <- data.frame()
+
 sc_OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_copy_ogs) {
   
   sc_prop_results_df = as.data.frame(matrix(ncol = 6, nrow = 140))
@@ -1111,6 +1113,9 @@ sc_OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, singl
     sc_hdr_ogs <- ws_hdr_ogs %>% dplyr::filter(strain == soi) %>% dplyr::distinct(Orthogroup) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::pull(Orthogroup)
     sc_prop_results_df[i,2] = length(sc_hdr_ogs)
     
+    # Appending HDR single-copy OGs to a master list:
+    HDR_sc_ogs <<- HDR_sc_ogs %>% dplyr::bind_rows(data.frame(sc_hdr_ogs))
+    
     # Single-copy non-HDR OGs
     sc_nonHDR_ogs <- og_matrix_relationships %>% dplyr::select(Orthogroup, dplyr::all_of(soi)) %>% filter(!is.na(.data[[soi]])) %>% dplyr::filter(!Orthogroup %in% hdr_ogs) %>% dplyr::filter(Orthogroup %in% single_copy_ogs) %>% dplyr::distinct(Orthogroup) %>% dplyr::pull()
     sc_prop_results_df[i,3] = length(sc_nonHDR_ogs)
@@ -1130,6 +1135,10 @@ sc_OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, singl
 # Looking at all genes
 sc_prop_results <- sc_OG_enrichment(ws_hdr_ogs, strains, all_relations, sc_ogs)
 
+HDR_sc_ogs <- HDR_sc_ogs %>% dplyr::group_by(sc_hdr_ogs) %>% dplyr::mutate(count_inHDR = n()) %>%
+  dplyr::ungroup() %>% dplyr::distinct() # 2,274 of the 12,315 single-copy OGs are found in at least one HDR among 140 wild strains
+
+# write.table(HDR_sc_ogs, "../../processed_data/hdr_liftover/hdr_sc_ogs.tsv", quote = F, sep = "\t", row.names = F, col.names = T)
 
 plot_df_sc_prop <- sc_prop_results %>%
   tidyr::pivot_longer(
