@@ -143,7 +143,7 @@ all_plt <- ggplot(plot_df_norm, aes(x = stat, y = value, fill = region)) +
     panel.grid.major.x = element_blank(),
     legend.box.background = element_rect(color = "black", linewidth = 1),
     legend.position  = 'inside',
-    panel.border = element_rect(color = 'black', fill =NA),
+    panel.border = element_rect(color = 'black', fill = NA),
     legend.position.inside = c(0.12, 0.85),
     legend.title = element_blank(),
     legend.key.size = unit(1.5, "cm"),
@@ -159,7 +159,7 @@ all_plt <- ggplot(plot_df_norm, aes(x = stat, y = value, fill = region)) +
 all_plt
 
 # Save the plot
-# ggsave("../../figures/supplementary/cnv_pav_allGenes.png", width = 7.5, height = 5.5, dpi = 600)
+# ggsave("../../figures/supplementary/cnv_pav_allGenes.png", all_plt, width = 7.5, height = 5.5, dpi = 600)
 
 
 

@@ -118,7 +118,7 @@ final_kaks_df <- dplyr::bind_rows(final_kaks_list) %>%
 
 # How many of the 12,315 SC OGs passed QC for Ka and Ks calculations?
 print(length(unique(final_kaks_df$OG))) # 11,631
-stats <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::group_by(inHDR) %>% dplyr::summarize(number_of_OGs = n()) # 2,185 in HDRs and 9,644 outside HDRs
+stats <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::group_by(inHDR) %>% dplyr::summarize(number_of_OGs = n()) # 2,124 in HDRs and 9,507 outside HDRs
 
 kaks_plt <- final_kaks_df %>% dplyr::filter(values > 0) %>% dplyr::mutate(stats = ifelse(stats == "mean_pairwise_ks", "Ks",
                                                                                          ifelse(stats == "mean_pairwise_ka", "Ka", "Ka / Ks"))) %>%
@@ -147,24 +147,28 @@ annotation_df <- stats_final %>%
     TRUE ~ "ns"), y_pos = 6)
 
 # Difference in Ks, Ka, and Ka / Ks between SC OGs in HDRs and not in HDRs?
-ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_inHDR >= 10), aes(x = stats, y = values, fill = inHDR)) +
+kaks_all_sc_ogs <- ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_inHDR >= 10), aes(x = stats, y = values, fill = inHDR)) +
   geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outliers = FALSE, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.7), size = 1, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.7), size = 0.5, alpha = 0.5) +
   geom_text(data = annotation_df, aes(x = stats, y = y_pos, label = label), inherit.aes = FALSE, size = 5) +
   # geom_hline(yintercept = 1, linetype = "dashed") +
   scale_fill_manual(values = c("non-HDR" = "blue", "HDR" = "RED")) +
   scale_y_log10(labels = scales::label_number()) +
   theme(
-    axis.text.x = element_text(size = 16, color = 'black'),
-    axis.text.y = element_text(size = 14, color = 'black'),
-    axis.title.y = element_text(size = 16, color = 'black'),
+    axis.text.x = element_text(size = 12, color = 'black'),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.title.y = element_text(size = 12, color = 'black'),
     panel.border = element_rect(color = 'black', fill = NA),
     legend.position = 'inside',
     legend.position.inside = c(0.9, 0.2),
-    legend.text = element_text(size = 16, color = 'black'),
+    legend.text = element_text(size = 10, color = 'black'),
     panel.background = element_blank()
   ) +
   labs(x = NULL, y = expression("Mean pairwise value (log"[10]*")"), fill = NULL)
+# kaks_all_sc_ogs
+
+# Save the plot
+# ggsave("../../figures/supplementary/KaKs_all_singleCopy_OGs.png", kaks_all_sc_ogs, width = 7.5, height = 6, dpi = 600)
 
 # Does sequence divergence (Ks) and non-synonymous rate (Ka) scale with frequence SC OG is found in a HDR?
 ggplot(kaks_plt %>% dplyr::filter(stats == "Ks",
@@ -472,7 +476,7 @@ ggplot(kaks_plt_nhr, aes(x = stats, y = values, fill = inHDR)) +
 # For cytochrome P450s
 # ============================================================================================================================================================================================ #
 ws_cyto <- readr::read_tsv("../../processed_data/genome_resources/annotation/140_wild_strains_IPR_cytochromeP450.tsv")
-sc_cyto <- ws_nhr%>% dplyr::left_join(all_ws_genes_class_og, by = c("strain","gene")) %>% dplyr::filter(Orthogroup %in% og_id_list) %>%
+sc_cyto <- ws_nhr %>% dplyr::left_join(all_ws_genes_class_og, by = c("strain","gene")) %>% dplyr::filter(Orthogroup %in% og_id_list) %>%
   dplyr::select(OG = Orthogroup) %>% dplyr::distinct() %>% dplyr::pull()
 
 kaks_plt_cyto <- kaks_plt %>% dplyr::filter(OG %in% sc_cyto)
@@ -545,14 +549,14 @@ ggplot(master_ks, aes(x = stats, y = values, fill = inHDR)) +
   scale_fill_manual(values = c("non-HDR" = "blue", "HDR" = "RED")) +
   facet_wrap(~class, nrow = 1) +
   theme(
-    axis.text.x = element_text(size = 16, color = 'black'),
-    axis.text.y = element_text(size = 14, color = 'black'),
-    axis.title.y = element_text(size = 16, color = 'black'),
+    axis.text.x = element_text(size = 20, color = 'black'),
+    axis.text.y = element_text(size = 18, color = 'black'),
+    axis.title.y = element_text(size = 20, color = 'black'),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 20, color = 'black'),
+    strip.text = element_text(size = 22, color = 'black'),
     legend.position = 'inside',
     legend.position.inside = c(0.9, 0.5),
-    legend.text = element_text(size = 16, color = 'black'),
+    legend.text = element_text(size = 24, color = 'black'),
     panel.background = element_blank()
   ) +
   labs(x = NULL, y = "Mean pairwise value", fill = NULL)
@@ -578,14 +582,14 @@ ggplot(master_ka, aes(x = stats, y = values, fill = inHDR)) +
   scale_fill_manual(values = c("non-HDR" = "blue", "HDR" = "RED")) +
   facet_wrap(~class, nrow = 1) +
   theme(
-    axis.text.x = element_text(size = 16, color = 'black'),
-    axis.text.y = element_text(size = 14, color = 'black'),
-    axis.title.y = element_text(size = 16, color = 'black'),
+    axis.text.x = element_text(size = 20, color = 'black'),
+    axis.text.y = element_text(size = 18, color = 'black'),
+    axis.title.y = element_text(size = 20, color = 'black'),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 20, color = 'black'),
+    strip.text = element_text(size = 22, color = 'black'),
     legend.position = 'inside',
     legend.position.inside = c(0.9, 0.5),
-    legend.text = element_text(size = 16, color = 'black'),
+    legend.text = element_text(size = 24, color = 'black'),
     panel.background = element_blank()
   ) +
   labs(x = NULL, y = "Mean pairwise value", fill = NULL)
@@ -618,15 +622,39 @@ ggplot(master_kaks, aes(x = stats, y = values, fill = inHDR)) +
   geom_hline(yintercept = 1, linetype = "dashed") +
   facet_wrap(~class, nrow = 1) +
   theme(
-    axis.text.x = element_text(size = 16, color = 'black'),
-    axis.text.y = element_text(size = 14, color = 'black'),
-    axis.title.y = element_text(size = 16, color = 'black'),
+    axis.text.x = element_text(size = 20, color = 'black'),
+    axis.text.y = element_text(size = 18, color = 'black'),
+    axis.title.y = element_text(size = 20, color = 'black'),
     panel.border = element_rect(color = 'black', fill = NA),
-    strip.text = element_text(size = 20, color = 'black'),
+    strip.text = element_text(size = 22, color = 'black'),
     legend.position = 'inside',
-    legend.position.inside = c(0.9, 0.8),
-    legend.text = element_text(size = 16, color = 'black'),
+    legend.position.inside = c(0.9, 0.5),
+    legend.text = element_text(size = 24, color = 'black'),
     panel.background = element_blank()
   ) +
   labs(x = NULL, y = "Mean pairwise value", fill = NULL)
+
+
+
+
+
+
+
+# ============================================================================================================================================================================================ #
+# What proportion of single-copy OGs in HDRs are these five gene classes?
+# ============================================================================================================================================================================================ #
+five_geneClasses <- kaks_plt_gpcr %>% dplyr::bind_rows(kaks_plt_cyto, kaks_plt_lectin, kaks_plt_fbox, kaks_plt_nhr) %>%
+  dplyr::filter(inHDR == "HDR") %>% dplyr::distinct(OG) # 394.....
+
+
+
+
+
+
+
+
+
+
+
+
 
