@@ -23,7 +23,7 @@ WSs <- long_class %>%
 # ======================================================================================================================================================================================== #
 # IPR results
 # ======================================================================================================================================================================================== #
-all_ipr <- readr::read_tsv("../../processed_data/genome_resources/annotation/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>%
+all_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>%
   dplyr::filter(!grepl("CGC1_", tran), !grepl("N2_", tran)) %>% # using IPR results for wild strains only 
   dplyr::select(tran, IPR_accession, IPR_description, GO)
 

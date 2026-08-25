@@ -120,6 +120,11 @@ final_kaks_df <- dplyr::bind_rows(final_kaks_list) %>%
 print(length(unique(final_kaks_df$OG))) # 11,631
 stats <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::group_by(inHDR) %>% dplyr::summarize(number_of_OGs = n()) # 2,124 in HDRs and 9,507 outside HDRs
 
+filt_ogs <- final_kaks_df %>% dplyr::distinct(OG) %>% dplyr::rename(Orthogroup = OG)
+filt_hdr_ogs <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::filter(inHDR == "HDR") %>% dplyr::select(Orthogroup = OG, -inHDR)
+# write.table(filt_ogs, "../../processed_data/divergence_estimates/filtered_sc_OGs.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
+# write.table(filt_hdr_ogs, "../../processed_data/divergence_estimates/filtered_sc_OGs_inHDRs.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
+
 kaks_plt <- final_kaks_df %>% dplyr::filter(values > 0) %>% dplyr::mutate(stats = ifelse(stats == "mean_pairwise_ks", "Ks",
                                                                                          ifelse(stats == "mean_pairwise_ka", "Ka", "Ka / Ks"))) %>%
   dplyr::mutate(stats = factor(stats, levels = c("Ks", "Ka", "Ka / Ks")))
