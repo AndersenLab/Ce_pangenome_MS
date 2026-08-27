@@ -65,7 +65,7 @@ ipr_enrichment <- k_tbl %>%
   dplyr::mutate(x = tidyr::replace_na(x, 0L)) %>%
   dplyr::mutate(
     pval = stats::phyper(q = x - 1, m = k, n = N - k, k = n, lower.tail = FALSE),
-    expected = (n * k) / N, # if IPR genes are randomly distributed, you’d expect this many HDR genes to carry the IPR.
+    expected = (n * 1.0 * k) / N, # if IPR genes are randomly distributed, you’d expect this many HDR genes to carry the IPR.
     enrich_ratio = dplyr::if_else(expected > 0, x / expected, NA_real_), # (x HDR with IPR / k background with IPR) / (n HDR genes / N background genes)
     # odds ratio with Haldane–Anscombe correction (adding 0.5 to each cell to avoid infinities)
     OR = {
@@ -85,7 +85,7 @@ ipr_enrichment <- k_tbl %>%
 ipr_sig <- ipr_enrichment %>%
   dplyr::filter(FDR_p.adjust < 0.05)
 
-ipr_sig %>% dplyr::slice_head(n = 30)
+# ipr_sig %>% dplyr::slice_head(n = 30)
 
 ipr_sig_gene_collapsed <- all_ipr_background %>%
   dplyr::filter(IPR_accession %in% ipr_sig$IPR_accession) %>%
@@ -98,15 +98,16 @@ ipr_sig_gene_collapsed <- all_ipr_background %>%
     genes_all   = paste(sort(unique(tran)), collapse = ", "),
     .groups = "drop") %>%
   dplyr::left_join(ipr_sig %>% dplyr::select(IPR_accession, x, k, n, N, expected, enrich_ratio, OR, pval, FDR_p.adjust), by = "IPR_accession") %>%
-  dplyr::mutate(Region = "HDR single-copy orthologs")
+  dplyr::mutate(Region = "HDR single-copy orthologs") %>%
+  dplyr::filter(x != k, n_genes_HDR > 284) # remove single-copy orthogroups that are ONLY found in HDRs - likely represent one or two orthogroups
 
 data_plt <- ipr_sig_gene_collapsed %>% 
   dplyr::arrange(FDR_p.adjust) %>% 
   dplyr::filter(IPR_accession != "") %>% 
-  dplyr::slice_head(n = 30) %>% dplyr::arrange(desc(FDR_p.adjust)) %>% 
+  dplyr::slice_head(n = 30) %>% dplyr::arrange(n_genes_HDR) %>%
   dplyr::mutate(plotpoint = dplyr::row_number()) %>%
   dplyr::mutate(FDR_p.adjust = pmax(FDR_p.adjust, 1e-320)) %>% # p values that are "00000e+00" are clipped so that they aren't displayed as infinity
-  dplyr::mutate(ortholog ratio = )
+  dplyr::mutate(orthologRatioInHDRs = x / k)
 
 
 # Concatenating enrichment of all three gene sets and pulling the most enriched IPR terms among all

@@ -235,7 +235,7 @@ col_annotation_GPCRs<- pav_mat_GPCRS %>%
 col_annotation_GPCRs <- col_annotation_GPCRs[colnames(pav_matrix_ordered_GPCRs), , drop = FALSE]
 
 # ======================================================================================================================================================================================== #
-# Looking at heatmap of all orthogroups
+# Looking at heatmap
 # ======================================================================================================================================================================================== #
 # Column annotation (top)
 col_ha_GPCRs <- HeatmapAnnotation(
@@ -309,7 +309,7 @@ col_annotation_FBOX<- pav_mat_FBOX %>%
 col_annotation_FBOX <- col_annotation_FBOX[colnames(pav_matrix_ordered_FBOX), , drop = FALSE]
 
 # ======================================================================================================================================================================================== #
-# Looking at heatmap of all orthogroups
+# Looking at heatmap 
 # ======================================================================================================================================================================================== #
 # Column annotation (top)
 col_ha_FBOX <- HeatmapAnnotation(
@@ -383,7 +383,7 @@ col_annotation_CLECTIN<- pav_mat_CLECTIN %>%
 col_annotation_CLECTIN <- col_annotation_CLECTIN[colnames(pav_matrix_ordered_CLECTIN), , drop = FALSE]
 
 # ======================================================================================================================================================================================== #
-# Looking at heatmap of all orthogroups
+# Looking at heatmap 
 # ======================================================================================================================================================================================== #
 # Column annotation (top)
 col_ha_CLECTIN <- HeatmapAnnotation(
@@ -454,7 +454,7 @@ col_annotation_NHR<- pav_mat_NHR %>%
 col_annotation_NHR <- col_annotation_NHR[colnames(pav_matrix_ordered_NHR), , drop = FALSE]
 
 # ======================================================================================================================================================================================== #
-# Looking at heatmap of all orthogroups
+# Looking at heatmap
 # ======================================================================================================================================================================================== #
 # Column annotation (top)
 col_ha_NHR <- HeatmapAnnotation(
@@ -525,7 +525,7 @@ col_annotation_CCYTO<- pav_mat_CCYTO %>%
 col_annotation_CCYTO <- col_annotation_CCYTO[colnames(pav_matrix_ordered_CCYTO), , drop = FALSE]
 
 # ======================================================================================================================================================================================== #
-# Looking at heatmap of all orthogroups
+# Looking at heatmap 
 # ======================================================================================================================================================================================== #
 # Column annotation (top)
 col_ha_CCYTO <- HeatmapAnnotation(
@@ -551,6 +551,108 @@ pav_heatmap_CCYTO <- ComplexHeatmap::Heatmap(
   show_heatmap_legend = FALSE)
 
 ComplexHeatmap::draw(pav_heatmap_CCYTO, padding = grid::unit(c(5, 5, 5, 5), "mm"))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ======================================================================================================================================================================================== #
+# Looking at clustering of only OGs that are found in at least one HDR
+# ======================================================================================================================================================================================== #
+# Load in all genes and the orthogroups they contribute to
+all_genes_ogs <- readr::read_tsv("../../processed_data/orthology/all_genes_class_OGs.tsv")
+
+# Load in HDR OGs among all wild strains
+hdr_ogs <- readr::read_tsv("../../processed_data/hdr_liftover/hdr_genes_OG_class.tsv") %>%
+  dplyr::distinct(Orthogroup) %>% dplyr::pull()
+
+
+# Filtering for GPCR-containing orthogroups
+pav_mat_HDRs <- pav_mat %>% dplyr::filter(Orthogroup %in% hdr_ogs) 
+
+pav_matrix_for_gheatmap_HDRs <- pav_mat_HDRs %>%
+  dplyr::select(-class) %>%
+  tidyr::pivot_longer(cols = all_of(strainCol_c2_u), names_to = "strain", values_to = "presence") %>%
+  tidyr::pivot_wider(names_from = Orthogroup, values_from = presence) %>%
+  tibble::column_to_rownames("strain") %>%
+  as.matrix()
+
+# Reorder columns by gene class (core -> accessory -> private)
+og_order <- pav_mat_HDRs %>% dplyr::pull(Orthogroup) %>% as.character()
+pav_matrix_for_gheatmap_HDRs <- pav_matrix_for_gheatmap_HDRs[, og_order]
+
+# ======================================================================================================================================================================================== #
+# Order strains according to BUSCO-inferred phylogency
+# ======================================================================================================================================================================================== #
+# Reorder matrix rows to match tree order
+pav_matrix_ordered_HDRs <- pav_matrix_for_gheatmap_HDRs[strain_order_by_y, ]
+
+# Verify the strain ordering is correct
+identical(rownames(pav_matrix_ordered_HDRs), strain_order_by_y)  # Should be TRUE
+
+# ======================================================================================================================================================================================== #
+# Create annotation for columns (orthogroups)
+# ======================================================================================================================================================================================== #
+col_annotation_HDRss<- pav_mat_HDRs %>%
+  dplyr::select(Orthogroup, class) %>%
+  dplyr::distinct() %>%
+  tibble::column_to_rownames("Orthogroup")
+
+# OG name matching
+col_annotation_HDRs <- col_annotation_HDRs[colnames(pav_matrix_ordered_HDRs), , drop = FALSE]
+
+# ======================================================================================================================================================================================== #
+# Looking at heatmap of all orthogroups
+# ======================================================================================================================================================================================== #
+# Column annotation (top)
+col_ha_HDRss <- HeatmapAnnotation(
+  class = col_annotation_HDRs$class,
+  col = list(class = ann_colors$class),
+  show_legend = FALSE,
+  show_annotation_name = FALSE)
+
+pav_heatmap_HDRs <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered_HDRs,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha_HDRss,
+  right_annotation = row_ha,
+  row_names_gp = grid::gpar(fontsize = 5),
+  column_title = "HDRs orthogroups",
+  column_title_side = "bottom",
+  
+  border = TRUE,
+  show_heatmap_legend = FALSE)
+
+ComplexHeatmap::draw(pav_heatmap_HDRs, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
