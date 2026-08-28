@@ -122,7 +122,7 @@ geo.colors <- c("Big Island"="black", "Molokai" = "#66C2A5", "Maui" = "yellow", 
                 "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
 
 pca_df <- pca_df %>%
-  mutate(label = ifelse(PC2 > 50, strain, NA))
+  dplyr::mutate(label = ifelse(PC2 > 50, strain, NA))
 
 PCA <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
   geom_text_repel(aes(label = label), size = 2, max.overlaps = Inf, show.legend = FALSE) +
