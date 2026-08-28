@@ -155,7 +155,7 @@ row_ha <- ComplexHeatmap::rowAnnotation(
   show_annotation_name = FALSE,
   annotation_legend_param = list(
     Geo = list(
-      title_gp = grid::gpar(fontface = "plain"))))
+      title_gp = grid::gpar(fontrsize = 3, fontface = "plain"))))
 
 pav_heatmap <- ComplexHeatmap::Heatmap(
   pav_matrix_ordered,
@@ -177,13 +177,45 @@ ComplexHeatmap::draw(pav_heatmap, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 
+#### LOAD IN THE LIST OF HAWAIIAN STRAINS THAT CLUSTER IN PCA
+pca_cluster_strains <- readr::read_tsv("../../processed_data/structural_variants/PCA_hawaii_cluster.tsv") %>% dplyr::filter(strain != "ECA2151")
 
+# colored block to highlight strains
+pca_highlight <- ifelse(rownames(pav_matrix_ordered) %in% pca_cluster_strains$strain, "PCA_cluster", "Other")
 
+# Left annotation
+left_ha <- ComplexHeatmap::rowAnnotation(
+  PCA = anno_simple(
+    pca_highlight,
+    col = c("PCA_cluster" = "red", "Other" = "white"),
+    width = unit(3, "mm")),
+  show_annotation_name = FALSE)
 
+# Update heatmap with left annotation
+pav_heatmap2 <- ComplexHeatmap::Heatmap(
+  pav_matrix_ordered,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+  col = c("0" = "white", "1" = "black"),
+  top_annotation = col_ha,
+  right_annotation = row_ha,
+  left_annotation = left_ha,  # ADD THIS
+  row_names_gp = grid::gpar(fontsize = 3),
+  column_title = "Orthogroups",
+  column_title_side = "bottom",
+  border = TRUE,
+  show_heatmap_legend = FALSE)
 
+ComplexHeatmap::draw(pav_heatmap2, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
+# Save the plot
+pav_drawn <- ComplexHeatmap::draw(pav_heatmap2, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
-
+png("../../figures/supplementary/PCA_cluster_pav_heatmap.png", width = 7.5, height = 6, units = "in", res = 600)
+print(pav_drawn)
+dev.off()
 
 
 
