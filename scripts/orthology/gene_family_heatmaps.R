@@ -194,14 +194,14 @@ left_ha <- ComplexHeatmap::rowAnnotation(
 # Update heatmap with left annotation
 pav_heatmap2 <- ComplexHeatmap::Heatmap(
   pav_matrix_ordered,
-  cluster_rows = FALSE,
+  cluster_rows = TRUE,
   cluster_columns = FALSE,
   show_row_names = TRUE,
   show_column_names = FALSE,
   col = c("0" = "white", "1" = "black"),
   top_annotation = col_ha,
   right_annotation = row_ha,
-  left_annotation = left_ha,  # ADD THIS
+  left_annotation = left_ha,  # add annotation of 19 Hawaiian strains
   row_names_gp = grid::gpar(fontsize = 3),
   column_title = "Orthogroups",
   column_title_side = "bottom",
@@ -213,7 +213,8 @@ ComplexHeatmap::draw(pav_heatmap2, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 # Save the plot
 pav_drawn <- ComplexHeatmap::draw(pav_heatmap2, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
-png("../../figures/supplementary/PCA_cluster_pav_heatmap.png", width = 7.5, height = 6, units = "in", res = 600)
+# Save the supplementary figure
+png("../../figures/supplementary/PCA_cluster_pav_heatmap.png", width = 7.5, height = 6, units = "in", res = 600, type = "cairo")
 print(pav_drawn)
 dev.off()
 
