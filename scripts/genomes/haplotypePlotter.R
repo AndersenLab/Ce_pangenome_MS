@@ -641,7 +641,7 @@ default_colors <- setNames(hcl.colors(length(shuffled_aliases), "Dark 3"), shuff
 final_colors <- default_colors[ordered_aliases]
 
 # Optionally, if you have the "non-ortho" alias (or any other), add it explicitly:
-final_colors <- c(final_colors, "Unknown gene" = "darkgrey")
+final_colors <- c(final_colors, "non-N2 gene" = "darkgrey")
 
 
 plot_ad_segments <- plot_ad %>%
@@ -667,7 +667,7 @@ all_hap_bg <- ggplot() +
                aes(x = boundStart - shift, xend = boundEnd - shift, y = y_pos, yend = y_pos)) +
   geom_polygon(data = trapezium_polys, 
                aes(x = x, y = y, group = group, fill = alias)) +
-  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
+  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"non-N2 gene",as.character(alias))),
             aes(xmin = start, xmax = end, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias),color = "black") +
 
   scale_y_continuous(
@@ -697,8 +697,9 @@ all_hap_bg <- ggplot() +
 all_hap_bg
 
 # Cowplot and save the plot
-facet_order <- c("AB1", "NIC2", "ECA1202", "ECA1208", "ECA1228", "ECA1237", "ECA1286", "ECA1287", "ECA1409",
-                 "ECA1751", "ECA1769", "ECA191","ECA1997","ECA2081","ECA2417","ECA2473","ECA2948","ECA722","ECA723","ECA730")
+facet_order <- c("AB1", "NIC2", "ECA730", "ECA723", "ECA722", "ECA2948", "ECA2473", "ECA2417", "ECA2081",
+                 "ECA1997", "ECA191", "ECA1769", "ECA1751", "ECA1409", "ECA1287", "ECA1286",
+                 "ECA1237", "ECA1228", "ECA1208", "ECA1202")
 ALN <- ggplot(tigTrim %>% dplyr::mutate(STRAIN = factor(STRAIN, levels = facet_order),
                                         S2_plot = ifelse(inv, tigsize - E2, S2),
                                         E2_plot = ifelse(inv, tigsize - S2, E2),
