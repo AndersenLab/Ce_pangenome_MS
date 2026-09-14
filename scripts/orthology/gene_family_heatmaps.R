@@ -178,7 +178,7 @@ ComplexHeatmap::draw(pav_heatmap, padding = grid::unit(c(5, 5, 5, 5), "mm"))
 
 
 #### LOAD IN THE LIST OF HAWAIIAN STRAINS THAT CLUSTER IN PCA
-pca_cluster_strains <- readr::read_tsv("../../processed_data/structural_variants/PCA_hawaii_cluster.tsv") %>% dplyr::filter(strain != "ECA2151")
+pca_cluster_strains <- readr::read_tsv("../../processed_data/structural_variants/PCA_hawaii_cluster.tsv")
 
 # colored block to highlight strains
 pca_highlight <- ifelse(rownames(pav_matrix_ordered) %in% pca_cluster_strains$strain, "PCA_cluster", "Other")

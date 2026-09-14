@@ -31,6 +31,8 @@ merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_m
   dplyr::filter(if_all(8:last_col(), ~ .x != "./.")) %>%
   dplyr::filter(number_svs_merged == 19)
 
+write.table(merged_SV, "../../tables/hawaiian_strain_PCA_SVs.tsv", col.names = T, row.names = F, sep = '\t', quote = F)
+
 ggplot(merged_SV) +
   geom_rect(aes(xmin = (pos - 150) / 1e6, xmax = (pos + sv_length + 150) / 1e6, ymin = 0, ymax = 1, fill = sv_type)) +
   facet_wrap(~chrom, scales = "free") +

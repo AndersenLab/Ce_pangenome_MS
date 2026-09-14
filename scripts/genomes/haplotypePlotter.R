@@ -469,7 +469,7 @@ N2_ad_corr <- N2_ad %>%
 g_count <- length(unique(N2_ad_corr$Parent))
 
 # Ordering of strains
-desired_order <- c("N2","ECA1202", "ECA1208", "ECA1228", "ECA1237", "ECA1286", "ECA1287", "ECA1409",
+desired_order <- c("N2","ECA2151", "ECA1202", "ECA1208", "ECA1228", "ECA1237", "ECA1286", "ECA1287", "ECA1409",
                            "ECA1751", "ECA1769", "ECA191","ECA1997","ECA2081","ECA2417","ECA2473","ECA2948","ECA722","ECA723","ECA730", "JU2526", "NIC2", "CGC1","AB1")
 
 WI_ad <- boundGenes %>% 
@@ -699,7 +699,7 @@ all_hap_bg
 # Cowplot and save the plot
 facet_order <- c("AB1", "NIC2", "ECA730", "ECA723", "ECA722", "ECA2948", "ECA2473", "ECA2417", "ECA2081",
                  "ECA1997", "ECA191", "ECA1769", "ECA1751", "ECA1409", "ECA1287", "ECA1286",
-                 "ECA1237", "ECA1228", "ECA1208", "ECA1202")
+                 "ECA1237", "ECA1228", "ECA1208", "ECA1202", "ECA2151")
 ALN <- ggplot(tigTrim %>% dplyr::mutate(STRAIN = factor(STRAIN, levels = facet_order),
                                         S2_plot = ifelse(inv, tigsize - E2, S2),
                                         E2_plot = ifelse(inv, tigsize - S2, E2),
@@ -713,7 +713,7 @@ ALN <- ggplot(tigTrim %>% dplyr::mutate(STRAIN = factor(STRAIN, levels = facet_o
             aes(xmin = as.numeric(start) / 1e6, xmax = as.numeric(end) / 1e6, ymin = -Inf, ymax = Inf), 
             fill = "red", inherit.aes = FALSE) +
   geom_segment(aes(x=S1/1e6,xend=E1/1e6,y=St2_plot/1e6,yend=Et2_plot/1e6), color = 'black', size = 0.75) +
-  facet_wrap(~STRAIN,scales = 'free', nrow = 4) +
+  facet_wrap(~STRAIN,scales = 'free', nrow = 3) +
   xlab("N2 chromsome II position (Mb)") +
   ylab("Wild strain contig position (Mb)") +
   theme(panel.background = element_blank(),
