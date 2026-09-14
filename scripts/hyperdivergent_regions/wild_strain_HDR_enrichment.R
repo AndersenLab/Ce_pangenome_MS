@@ -27,7 +27,7 @@ all_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_nam
   dplyr::filter(!grepl("CGC1_", tran), !grepl("N2_", tran)) %>% # using IPR results for wild strains only 
   dplyr::select(tran, IPR_accession, IPR_description, GO)
 
-ws_hdr_genes <- readr::read_tsv("../../processed_data/hdr_liftover/wild_strain_genes_inHDRs.tsv", col_names = c("strain", "gene", "class")) %>%
+ws_hdr_genes <- readr::read_tsv("../../tables/wild_strain_genes_inHDRs.tsv") %>%
   dplyr::mutate(gene = paste0(strain, "_", gene))
 
 ws_hdr_priv_genes <- ws_hdr_genes %>% dplyr::filter(class == "private") %>% dplyr::pull(gene)
@@ -370,7 +370,7 @@ data_plt_core <- ipr_sig_gene_collapsed %>%
 concat_IPR_enrich <- data_plt_priv %>% dplyr::bind_rows(data_plt_acc, data_plt_core) %>%
   dplyr::select(-plotpoint) %>%
   dplyr::arrange(FDR_p.adjust) %>%
-  dplyr::slice_head(n = 40) %>%
+  dplyr::slice_head(n = 35) %>%
   dplyr::arrange(desc(FDR_p.adjust)) %>%
   dplyr::rename(`Gene set` = Region) %>%
   dplyr::mutate(`Gene set` = ifelse(`Gene set` == "Accessory pangenome", "Accessory", 
@@ -383,21 +383,20 @@ diff <- concat_IPR_enrich %>%
   dplyr::mutate(plotpoint = dplyr::row_number())
 
 plot_IPR_all_diff <- ggplot(diff) +
-  geom_vline(xintercept = -log10(0.05), color='blue', linewidth=0.4) +
   geom_point(aes(x = n_genes_HDR, y = plotpoint, size = enrich_ratio, fill = -log10(FDR_p.adjust), shape = `Gene set`)) +
   scale_y_continuous(breaks = diff$plotpoint, labels = diff$IPR_description, name = "", expand = c(0.02,0.02)) +
   scale_shape_manual(values = c("Core" = 21, "Accessory" = 22, "Private" = 24)) +
   scale_fill_gradient(low = "yellow", high = "red", breaks = c(round(min(-log10(diff$FDR_p.adjust))), round((max(-log10(diff$FDR_p.adjust)) + min(-log10(diff$FDR_p.adjust))) / 2), round(max(-log10(diff$FDR_p.adjust))))) +
-  scale_size_continuous(range = c(1, 5), name = "Fold enrichment", breaks = pretty(diff$enrich_ratio, n = 4)) +
+  scale_size_continuous(range = c(1, 4), name = "Fold enrichment", breaks = pretty(diff$enrich_ratio, n = 4)) +
   coord_cartesian(xlim = c(0, 12000)) +
-  theme(axis.text.x = element_text(size=10, color='black'),
-        axis.text.y = element_text(size=10, color='black'),
-        axis.title = element_text(size=11, color='black'),
+  theme(axis.text.x = element_text(size=9, color='black'),
+        axis.text.y = element_text(size=6.5, color='black'),
+        axis.title = element_text(size=9, color='black'),
         plot.title = element_blank(),
-        legend.title = element_text(size = 10, color='black', hjust = 1),
-        legend.text = element_text(size = 10, color='black', hjust = 1),
+        legend.title = element_text(size = 9, color='black', hjust = 1),
+        legend.text = element_text(size = 9, color='black', hjust = 1),
         legend.position = "inside",
-        legend.position.inside = c(0.8, 0.2),
+        legend.position.inside = c(0.65, 0.35),
         legend.direction = "horizontal", legend.box = "vertical",
         legend.spacing.y = unit(0.0001, 'cm'),
         legend.key.height = unit(0.01, "cm"),
@@ -407,7 +406,7 @@ plot_IPR_all_diff <- ggplot(diff) +
         panel.grid = element_blank(),
         panel.background = element_blank(),
         panel.border = element_rect(fill = NA),
-        plot.margin = margin(b = 5, t = 10, r = 25, l = 2, unit = "pt")) +
+        plot.margin = margin(b = 5, t = 5, r = 15, l = 25, unit = "pt")) +
   guides(
     fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 1),
     size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
@@ -418,7 +417,76 @@ plot_IPR_all_diff
 write.table(diff, "../../tables/enriched_IPR_inHDRs.tsv", row.names = F, col.names = T, sep = "\t")
 
 
+### Make figure 4:
+## Relative fraction of HDR genes in each gene set
+hdr_nonHDR_prop_geneset <- readr::read_tsv("../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv") 
 
+strain_order <- hdr_nonHDR_prop_geneset %>% dplyr::filter(`Gene set` == "Private") %>%
+  dplyr::arrange(desc(scaled_geneSet_props_HDR)) %>%
+  dplyr::distinct(strain) %>%
+  dplyr::pull(strain)
+
+hdr_nonHDR_prop_geneset <- hdr_nonHDR_prop_geneset %>% dplyr::mutate(strain = factor(strain, levels = strain_order),
+                                                                     `Gene set`  = factor(`Gene set`, levels = c("Core", "Accessory", "Private"))) 
+
+# Plotting relative fraction in HDRs
+hdr <- ggplot(data = hdr_nonHDR_prop_geneset) +
+  geom_col(aes(x = strain, y = scaled_geneSet_props_HDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
+  scale_fill_manual(values = c(
+    "Core" = "green4",
+    "Accessory" = "#DB6333",
+    "Private" = "magenta3"
+  )) +
+  theme(
+    axis.text.x = element_blank(),
+    legend.position = 'none',
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title = element_blank(),
+    plot.margin = margin(l = 40, r = 40, t = 10),
+    axis.text.y = element_text(size = 10, color = 'black')
+  ) +
+  scale_y_continuous(expand = c(0,0), breaks = c(0.25, 0.5, 0.75, 1)) 
+
+# Plotting relative fraction outside HDRs
+nonhdr <- ggplot(data = hdr_nonHDR_prop_geneset) +
+  geom_col(aes(x = strain, y = scaled_geneSet_props_NONHDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
+  scale_fill_manual(values = c(
+    "Core" = "green4",
+    "Accessory" = "#DB6333",
+    "Private" = "magenta3"
+  )) +
+  theme(
+    axis.text.x = element_blank(),
+    legend.position = 'none',
+    axis.ticks.x = element_blank(),
+    axis.title.x = element_blank(),
+    axis.title.y = element_blank(),
+    plot.margin = margin(l = 40, r = 40, b = 10),
+    axis.text.y = element_text(size = 10, color = 'black')
+  ) +
+  scale_y_continuous(expand = c(0,0))
+
+aligned <- cowplot::align_plots(hdr, nonhdr, align = "v", axis = "lr")
+
+# Each panel should be no more than 2.5in high and 6in wide!!!!!!!!!!!!!!! - into panels A) and B)
+fraction_gene_set_HDRs <- cowplot::plot_grid(cowplot::plot_grid(
+  aligned[[1]],aligned[[2]],
+  nrow = 2) + draw_label("Relative fraction of each gene set", x=0.02, y=0.5, vjust= 1.5, angle=90, size = 11, color = 'black') +
+    draw_label("Genes in HDRs", x=0.97, y=0.75, vjust= 1.5, angle=270, size = 11, color = 'black') +
+    draw_label("Genes not in HDRs", x=0.97, y=0.275, vjust= 1.5, angle=270, size = 11, color = 'black'))
+
+fraction_gene_set_HDRs
+
+# Cowplot with enrichment results
+final_prop_enriched <- cowplot::plot_grid(
+  fraction_gene_set_HDRs, plot_IPR_all_diff,
+  rel_heights = c(0.7,1),
+  nrow = 2,
+  labels = c("a","b"))
+
+# Save the final plot
+# ggsave("../../figures/wild_strain_HDRs_gene_set_enrichment.png", final_prop_enriched, width = 7.5, height = 7.5, dpi = 600)
 
 
 ##########################################################################################

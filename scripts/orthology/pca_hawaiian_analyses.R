@@ -14,7 +14,6 @@ all_ogs_class <- readr::read_tsv("../../processed_data/orthology/all_genes_class
 # Load in Hawaiian strains that cluster in PCA, BUSCO-inferred relatendess, and accessory orthogroup clustering
 pca_strain <- readr::read_tsv("../../processed_data/structural_variants/PCA_hawaii_cluster.tsv") %>% dplyr::pull()
 
-
 # Load in SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>% 
   dplyr::filter(chrom != "MtDNA")
@@ -31,7 +30,6 @@ merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_m
   dplyr::select(1:7, dplyr::all_of(pca_strain)) %>%
   dplyr::filter(if_all(8:last_col(), ~ .x != "./.")) %>%
   dplyr::filter(number_svs_merged == 19)
-
 
 ggplot(merged_SV) +
   geom_rect(aes(xmin = (pos - 150) / 1e6, xmax = (pos + sv_length + 150) / 1e6, ymin = 0, ymax = 1, fill = sv_type)) +

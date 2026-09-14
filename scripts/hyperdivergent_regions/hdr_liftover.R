@@ -762,6 +762,8 @@ ws_genes_hdrs_stats <- ws_genes_hdrs %>%
   dplyr::ungroup() %>%
   dplyr::distinct(strain, class, ws_class_count_inHDR)
 
+# write.table(ws_genes_hdrs_stats, "../../processed_data/hdr_liftover/raw_liftover_HDR_gene_stats.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
+
 # Adding stats for the proportion of genes that are in HDRs for each strain and their contribution to each pangenome gene set
 ws_genes_hdrs_stats <- ws_genes_count %>%
   dplyr::left_join(ws_genes_hdrs_stats, by = c("strain", "class")) %>%
@@ -877,16 +879,13 @@ nonhdr <- ggplot(data = hdr_nonHDR_prop_geneset) +
 aligned <- cowplot::align_plots(hdr, nonhdr, align = "v", axis = "lr")
 
 # Each panel should be no more than 2.5in high and 6in wide!!!!!!!!!!!!!!! - into panels A) and B)
-fraction_gene_class_HDRs <- cowplot::plot_grid(cowplot::plot_grid(
+fraction_gene_set_HDRs <- cowplot::plot_grid(cowplot::plot_grid(
   aligned[[1]],aligned[[2]],
   nrow = 2) + draw_label("Relative fraction of each gene set", x=0.02, y=0.5, vjust= 1.5, angle=90, size = 11, color = 'black') +
     draw_label("Genes in HDRs", x=0.97, y=0.75, vjust= 1.5, angle=270, size = 11, color = 'black') +
     draw_label("Genes not in HDRs", x=0.97, y=0.25, vjust= 1.5, angle=270, size = 11, color = 'black'))
 
-fraction_gene_class_HDRs
-
-# ggsave("../../figures/supplementary/fraction_gene_class_HDRs.png", fraction_gene_class_HDRs, width = 7.5, height = 5, dpi = 600)
-
+fraction_gene_set_HDRs
 
 ############### Only HDR! #########################################
 relative_gene_set_HDR <- ggplot(data = hdr_nonHDR_prop_geneset) +
@@ -911,7 +910,6 @@ relative_gene_set_HDR
 
 # write.table(hdr_nonHDR_prop_geneset, "../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
 ###################################################################
-
 
 
 # Average proportion of WS genes in each gene set among all wild strains
