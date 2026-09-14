@@ -225,9 +225,53 @@ data_plt_priv <- ipr_sig_gene_collapsed %>%
   dplyr::filter(IPR_accession != "IPR008164") %>% # Excluding annotation of "Repeat of unknown function XGLTT"
   dplyr::arrange(FDR_p.adjust) %>% 
   dplyr::filter(IPR_accession != "") %>% 
-  dplyr::slice_head(n = 20) %>% dplyr::arrange(desc(FDR_p.adjust)) %>% 
+  dplyr::slice_head(n = 30) %>% dplyr::arrange(desc(FDR_p.adjust)) %>% 
   dplyr::mutate(plotpoint = dplyr::row_number())
 
+data_plt_priv_plt <- ipr_sig_gene_collapsed %>% 
+  dplyr::filter(IPR_accession != "IPR008164") %>% # Excluding annotation of "Repeat of unknown function XGLTT"
+  dplyr::arrange(FDR_p.adjust) %>% 
+  dplyr::filter(IPR_accession != "") %>% 
+  dplyr::slice_head(n = 30) %>% dplyr::arrange(n_genes_HDR) %>% 
+  dplyr::mutate(plotpoint = dplyr::row_number()) %>%
+  dplyr::rename(`Gene set` = Region)
+
+
+# Plotting the private HDR pangenome enrichment
+priv_HDR_enrich <- ggplot(data_plt_priv_plt) +
+  geom_point(aes(x = n_genes_HDR, y = plotpoint, size = enrich_ratio, fill = -log10(FDR_p.adjust), shape = `Gene set`)) +
+  scale_y_continuous(breaks = data_plt_priv_plt$plotpoint, labels = data_plt_priv_plt$IPR_description, name = "", expand = c(0.02,0.02)) +
+  scale_shape_manual(values =  c("Private pangenome" = 24)) +
+  scale_fill_gradient(low = "yellow", high = "red", breaks = c(round(min(-log10(data_plt_priv_plt$FDR_p.adjust))), round((max(-log10(data_plt_priv_plt$FDR_p.adjust)) + min(-log10(data_plt_priv_plt$FDR_p.adjust))) / 2), round(max(-log10(data_plt_priv_plt$FDR_p.adjust))))) +
+  scale_size_continuous(range = c(1, 4), name = "Fold enrichment", breaks = pretty(data_plt_priv_plt$enrich_ratio, n = 4)) +
+  coord_cartesian(xlim = c(0, 200)) +
+  theme(axis.text.x = element_text(size=9, color='black'),
+        axis.text.y = element_text(size=6.5, color='black'),
+        axis.title = element_text(size=9, color='black'),
+        plot.title = element_blank(),
+        legend.title = element_text(size = 9, color='black', hjust = 1),
+        legend.text = element_text(size = 9, color='black', hjust = 1),
+        legend.position = "inside",
+        legend.position.inside = c(0.65, 0.35),
+        legend.direction = "horizontal", legend.box = "vertical",
+        legend.spacing.y = unit(0.0001, 'cm'),
+        legend.key.height = unit(0.01, "cm"),
+        legend.key.width = unit(0.5, "cm"),
+        legend.box.just = "right",
+        text = element_text(family="Helvetica"),
+        panel.grid = element_blank(),
+        panel.background = element_blank(),
+        panel.border = element_rect(fill = NA),
+        plot.margin = margin(b = 5, t = 5, r = 15, l = 25, unit = "pt")) +
+  guides(
+    fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 1),
+    size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
+    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 0.5))) +
+  labs(title = "Enriched IPR terms for wild strain genes in HDRs",  x = "Gene count", size = "Fold enrichment", fill = expression(-log[10]~"(corrected p-value)"))
+priv_HDR_enrich
+
+# Save the plot
+ggsave("../../figures/supplementary/private_HDR_enrichment.png", priv_HDR_enrich, width = 7.5, height = 6, dpi = 600)
 
 
 ############################################################################### ACCESSORY HDR genes #############################################################
