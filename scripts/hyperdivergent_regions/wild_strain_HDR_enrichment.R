@@ -225,7 +225,7 @@ data_plt_priv <- ipr_sig_gene_collapsed %>%
   dplyr::filter(IPR_accession != "IPR008164") %>% # Excluding annotation of "Repeat of unknown function XGLTT"
   dplyr::arrange(FDR_p.adjust) %>% 
   dplyr::filter(IPR_accession != "") %>% 
-  dplyr::slice_head(n = 30) %>% dplyr::arrange(desc(FDR_p.adjust)) %>% 
+  dplyr::slice_head(n = 20) %>% dplyr::arrange(desc(FDR_p.adjust)) %>% 
   dplyr::mutate(plotpoint = dplyr::row_number())
 
 data_plt_priv_plt <- ipr_sig_gene_collapsed %>% 
@@ -234,7 +234,9 @@ data_plt_priv_plt <- ipr_sig_gene_collapsed %>%
   dplyr::filter(IPR_accession != "") %>% 
   dplyr::slice_head(n = 30) %>% dplyr::arrange(n_genes_HDR) %>% 
   dplyr::mutate(plotpoint = dplyr::row_number()) %>%
-  dplyr::rename(`Gene set` = Region)
+  dplyr::rename(`Gene set` = Region) %>% 
+  dplyr::mutate(IPR_description = ifelse(IPR_description == "BTB/POZ domain-containing adapter for CUL3-mediated RhoA degradation protein 1-3", 
+                                         "BTB/POZ domain-containing adapter for CUL3-mediated\nRhoA degradation protein 1-3", IPR_description))
 
 
 # Plotting the private HDR pangenome enrichment
@@ -252,7 +254,7 @@ priv_HDR_enrich <- ggplot(data_plt_priv_plt) +
         legend.title = element_text(size = 9, color='black', hjust = 1),
         legend.text = element_text(size = 9, color='black', hjust = 1),
         legend.position = "inside",
-        legend.position.inside = c(0.65, 0.35),
+        legend.position.inside = c(0.7, 0.25),
         legend.direction = "horizontal", legend.box = "vertical",
         legend.spacing.y = unit(0.0001, 'cm'),
         legend.key.height = unit(0.01, "cm"),
@@ -262,7 +264,7 @@ priv_HDR_enrich <- ggplot(data_plt_priv_plt) +
         panel.grid = element_blank(),
         panel.background = element_blank(),
         panel.border = element_rect(fill = NA),
-        plot.margin = margin(b = 5, t = 5, r = 15, l = 25, unit = "pt")) +
+        plot.margin = margin(b = 5, t = 5, r = 5, l = 1, unit = "pt")) +
   guides(
     fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 1),
     size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
