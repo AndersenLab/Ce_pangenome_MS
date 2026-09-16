@@ -341,7 +341,8 @@ del_freq <- ggplot(del_bin_plt) +
 bins_dt <- as.data.table(bins)
 bins_dt[, id := .I]  # optional: keep track of bins
 
-ins_calls <- filt_calls %>% dplyr::filter(sv_type == "INS", strain != "CGC1") %>% dplyr::mutate(end = pos + sv_length) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
+ins_calls <- filt_calls %>% dplyr::filter(sv_type == "INS", strain != "CGC1") %>% dplyr::mutate(end = pos + 1, pos = pos - 1) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain) # make sure 
+# that INS spans are just -1 and +1 buffer of call POS
 ins_calls_dt <- as.data.table(ins_calls)
 
 setkey(bins_dt, chrom, start, end)
@@ -418,7 +419,7 @@ inv_freq <- ggplot(inv_bin_plt) +
   xlab("N2 genomic position (Mb)") +
   coord_cartesian(ylim = c(0,1.01)) +
   scale_y_continuous(expand = c(0,0), limits = c(0, 1), breaks = seq(0, 0.75, 0.25))
-inv_freq
+
   
 # Concatenate together all three SV types!
 all_three_SVs <- cowplot::plot_grid(
@@ -429,6 +430,8 @@ all_three_SVs <- cowplot::plot_grid(
 
 # Save the figure
 ggsave("../../figures/supplementary/SV_HDR_enrichment.png", all_three_SVs, width = 7.5, height = 6, dpi = 600)
+
+
 
 
 # Looking at enrichment of SVs in HDRs
@@ -483,7 +486,7 @@ list(
 
 # INS enrichment in HDRs
 hdr_bins <- all_collapsed
-ins_calls <- filt_calls %>% dplyr::filter(sv_type == "INS", strain != "CGC1") %>% dplyr::mutate(end = pos + sv_length) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
+ins_calls <- filt_calls %>% dplyr::filter(sv_type == "INS", strain != "CGC1") %>% dplyr::mutate(end = pos + 1, pos = pos - 1) %>% dplyr::rename(start = pos) %>% dplyr::select(chrom,start,end,strain)
 
 to_gr <- function(df) {
   GRanges(
@@ -495,7 +498,6 @@ to_gr <- function(df) {
 genome_gr <- to_gr(chrom_sizes)          # whole genome space
 hdr_gr    <- to_gr(hdr_bins)  
 ins_gr    <- to_gr(ins_calls)            # ins intervals
-
 
 ins_gr_uniq <- unique(ins_gr)
 
@@ -611,7 +613,9 @@ maf_filt <- merged_SV %>%
   dplyr::mutate(end = pos + sv_length) %>% 
   dplyr::rename(start = pos) %>%
   dplyr::select(chrom, start, end, sv_type) %>%
-  dplyr::mutate(overlap = F)
+  dplyr::mutate(overlap = F) %>%
+  dplyr::mutate(start = ifelse(sv_type == "INS", start - 1, start),
+                end = ifelse(sv_type == "INS", start + 2, end)) # adjusting INSs coordinates so that start and end are merely -1 and +1 of the POS
 
 svs_dt <- as.data.table(maf_filt)
 n2_genes_dt <- as.data.table(n2_genes_plt)
@@ -665,7 +669,7 @@ gene_prop <- svs_inCodingRegions %>% dplyr::mutate(n2_total = 19972) %>%
 plt_stats <- final_stats %>% dplyr::select(sv_type,region,total_sv_type,region_count) %>%
   dplyr::left_join(gene_prop, by = c("sv_type", "region")) %>%
   dplyr::distinct() %>%
-  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV"))) %>%
+  dplyr::mutate(sv_type = factor(sv_type, levels = c("DEL","INS","INV"))) %>%
   dplyr::group_by(sv_type) %>%
   dplyr::mutate(prop = ifelse(is.na(prop), 100 - lag(prop), prop)) %>%
   dplyr::ungroup()
@@ -723,7 +727,7 @@ gene_prop_2 <- svs_inCodingRegions_2kb %>% dplyr::mutate(n2_total = 19972) %>%
 plt_stats_2 <- final_stats_2 %>% dplyr::select(sv_type,region,total_sv_type,region_count) %>%
   dplyr::left_join(gene_prop_2, by = c("sv_type", "region")) %>%
   dplyr::distinct() %>%
-  dplyr::mutate(sv_type = factor(sv_type, levels = c("INS","DEL","INV"))) %>%
+  dplyr::mutate(sv_type = factor(sv_type, levels = c("DEL","INS","INV"))) %>%
   dplyr::group_by(sv_type) %>%
   dplyr::mutate(prop = ifelse(is.na(prop), 100 - lag(prop), prop)) %>%
   dplyr::ungroup() %>%

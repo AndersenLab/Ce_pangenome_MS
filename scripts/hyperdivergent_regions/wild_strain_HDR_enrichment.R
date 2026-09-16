@@ -230,9 +230,9 @@ data_plt_priv <- ipr_sig_gene_collapsed %>%
 
 data_plt_priv_plt <- ipr_sig_gene_collapsed %>% 
   dplyr::filter(IPR_accession != "IPR008164") %>% # Excluding annotation of "Repeat of unknown function XGLTT"
-  dplyr::arrange(FDR_p.adjust) %>% 
-  dplyr::filter(IPR_accession != "") %>% 
-  dplyr::slice_head(n = 30) %>% dplyr::arrange(n_genes_HDR) %>% 
+  dplyr::arrange(FDR_p.adjust) %>%
+  dplyr::filter(IPR_accession != "") %>%
+  dplyr::slice_head(n = 30) %>% dplyr::arrange(n_genes_HDR) %>%
   dplyr::mutate(plotpoint = dplyr::row_number()) %>%
   dplyr::rename(`Gene set` = Region) %>% 
   dplyr::mutate(IPR_description = ifelse(IPR_description == "BTB/POZ domain-containing adapter for CUL3-mediated RhoA degradation protein 1-3", 
