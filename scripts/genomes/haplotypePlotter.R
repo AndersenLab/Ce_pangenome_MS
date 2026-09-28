@@ -737,7 +737,7 @@ ggsave("../../figures/supplementary/sra2_sra9_syntenyLoss.png", final_plt, width
 
 
 
-# REMOVE CODE ########################################
+# REMOVE CODE #####################################
 
  
 # ################################################################
