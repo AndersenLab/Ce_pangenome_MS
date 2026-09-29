@@ -98,20 +98,28 @@ geo.colors <- c("7TM GPCR, serpentine receptor class h (Srh)" = "blue", "7TM GPC
 ipr_abundance_hdr <- ggplot(data = ipr_desc_most_strain) + 
   geom_col(aes(x = strain, y = count_ipr, fill = IPR_description)) +
   scale_fill_manual(values = geo.colors) +
+  scale_x_discrete(limits = rev(unique(ipr_desc_most_strain$strain))) +
+  coord_flip() +
   theme(
     panel.background = element_blank(),
-    panel.border = element_rect(color = 'black', fill = NA),
-    axis.text.y = element_text(size = 10, color = 'black'),
-    axis.text.x = element_text(size = 3, color = 'black', angle = 75, hjust = 1),
-    axis.title.y = element_text(size = 10, color = 'black'),
+    panel.border = element_rect(color = "black", fill = NA),
+    axis.text.x = element_text(size = 7, color = "black"),
+    axis.text.y = element_text(size = 3, color = "black", hjust = 1),
     axis.title.x = element_blank(),
-    legend.text = element_text(size = 4, color = 'black'),
-    legend.title = element_text(size = 5, color = 'black')
+    axis.title.y = element_blank(),
+    plot.margin = margin(l = 3, r = 7, t = 5, b = 0),
+    legend.position = "bottom",
+    legend.text = element_text(size = 4.5, color = "black"),
+    legend.margin = margin(t = -5, r = 0, b = 0, l = 0),
+    legend.box.margin = margin(t = -5, r = 0, b = 0, l = 0),
+    plot.title = element_text(size = 8, color = "black", hjust = 0.5)
   ) +
-  scale_y_continuous(expand = expansion(mult = c(0, .05))) +
-  labs(y = "IPR description count (number of genes)", fill = "Most abundant IPR description in HDRs")
+  scale_y_continuous(expand = expansion(mult = c(0, .05)), position = 'right') +
+  labs(title = "Most abundant IPR description count (number of genes)", fill = NULL) +
+  guides(fill = guide_legend(nrow = 3, override.aes = list(size = 0.01)))
+ipr_abundance_hdr
 
-ggsave("../../figures/supplementary/most_abundant_IPR_inHDRs.png", ipr_abundance_hdr, width = 7.5, height = 5, dpi = 600)
+ggsave("../../figures/supplementary/most_abundant_IPR_inHDRs.png", ipr_abundance_hdr, width = 7.5, height = 7.5, dpi = 600)
 
 # Assessing if IPR term is enriched in specific geo locations
 geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")

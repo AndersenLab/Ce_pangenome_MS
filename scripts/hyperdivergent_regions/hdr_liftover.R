@@ -494,11 +494,11 @@ ex4 <- ggplot() +
         axis.text = element_text(size = 10, color = 'black'),
         axis.title = element_text(size = 11, color = 'black'),
         strip.text = element_text(size = 14, color = 'black'),
-        legend.position = "inside",
+        legend.position = "none") +
         # legend.background = element_rect(fill = "transparent", color = NA),
-        legend.box.background = element_rect(fill = "white", color = 'black'),
-        legend.position.inside = c(0.79,0.2),
-        legend.text = element_text(size = 10, color = 'black')) +
+        # legend.box.background = element_rect(fill = "white", color = 'black'),
+        # legend.position.inside = c(0.79,0.2),
+        # legend.text = element_text(size = 10, color = 'black')) +
   labs(x = "N2 genome position (Mb)", y = "ECA3005 contig position (Mb)", color = NULL)
 ex4
 
@@ -511,12 +511,15 @@ hdr_liftover_examples <- cowplot::plot_grid(
 hdr_liftover_examples
 
 # Save supplementary figure
-# ggsave("../../figures/supplementary/hdr_liftover_examples.png", hdr_liftover_examples, width = 7.5, height = 7.5, dpi = 600 )
+ggsave("../../figures/supplementary/hdr_liftover_examples.png", hdr_liftover_examples, width = 7.5, height = 7.5, dpi = 600 )
 
 # Plotting the size difference of the WS HDR lift-overs for all HDRs among all strains
+strain_colors <- setNames(viridisLite::turbo(length(unique(WS_HDRs$strain))), unique(WS_HDRs$strain))
+
 hdr_liftover_size <- ggplot(data = WS_HDRs) + 
   geom_point(aes(x = og_divSize / 1e6, y = divSize / 1e6, color = strain), size = 1) +
   geom_line(data = data.frame(x = c(0, 1.2)), aes(x = x, y = x), linetype = "dashed") +
+  scale_color_manual(values = strain_colors) +
   theme(
     panel.border = element_rect(color = 'black', fill = NA),
     panel.background = element_blank(),
@@ -533,7 +536,7 @@ hdr_liftover_size <- ggplot(data = WS_HDRs) +
 hdr_liftover_size
 
 # Save supplementary figure
-# ggsave("../../figures/supplementary/hdr_liftover_size_comparison.png", hdr_liftover_size, width = 7.5, height = 7.5, dpi = 600 )
+ggsave("../../figures/supplementary/hdr_liftover_size_comparison.png", hdr_liftover_size, width = 7.5, height = 7.5, dpi = 600 )
 
 # What is the distribution in size difference between N2 HDRs and their lifted-over size??
 hdr_diff <- WS_HDRs %>%

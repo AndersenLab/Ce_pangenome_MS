@@ -713,43 +713,22 @@ all_stats <- og_enrich_results_GPCRs %>% dplyr::mutate(type = "GPCRs") %>%
   dplyr::bind_rows((og_enrich_results_cyto %>% dplyr::mutate(type = "Cytochrome_P450s"))) %>% 
   dplyr::bind_rows((og_enrich_results_nhr %>% dplyr::mutate(type = "Nuclear_hormone_receptors"))) %>%
   dplyr::group_by(type) %>%
-  dplyr::mutate(CNV_inHDR = mean(CNV_inHDR),
-                PAV_inHDR = mean(PAV_inHDR),
-                n_to_n_inHDR  = mean(one_to_one_inHDR),
-                inHDR = mean(HDR_OG_count),
+  dplyr::mutate(CNV_HDR = mean(CNV_inHDR),
+                PAV_HDR = mean(PAV_inHDR),
+                n_to_n_HDR  = mean(one_to_one_inHDR),
+                HDR = mean(HDR_OG_count),
                 nonHDR = mean(nonHDR_OG_count)) %>%
   dplyr::ungroup()
 
-plt_all_stats <- all_stats %>% dplyr::select(CNV_inHDR, PAV_inHDR, n_to_n_inHDR, inHDR, nonHDR, type) %>%
+plt_all_stats <- all_stats %>% dplyr::select(CNV_HDR, PAV_HDR, n_to_n_HDR, HDR, nonHDR, type) %>%
   dplyr::distinct() %>%
   dplyr::mutate(across(-last_col(), round)) %>%
   tidyr::pivot_longer(
     cols = -type,
     names_to = "metric",
     values_to = "value") %>%
-  dplyr::mutate(metric = factor(metric, levels = c("CNV_inHDR","PAV_inHDR", "n_to_n_inHDR", "inHDR","nonHDR")),
+  dplyr::mutate(metric = factor(metric, levels = c("CNV_HDR","PAV_HDR", "n_to_n_HDR", "HDR","nonHDR")),
                 type = factor(type, levels = c("ALL","Cytochrome_P450s","Nuclear_hormone_receptors", "C_type_lectins","FBOX","GPCRs")))
-
-
-# stats <- ggplot(data = plt_all_stats) +
-#   geom_col(aes(x = metric, y = value, fill = type), position = "dodge") +
-#   scale_fill_manual(values = c("ALL" = "black", "GPCRs" = "olivedrab", "FBOX" = "firebrick", "C_type_lectins" = "steelblue", "Nuclear_hormone_receptors" = "violet", "Cytochrome_P450s" = "orange")) +
-#   scale_y_log10(expand = expansion(mult = c(0,0.01))) +
-#   theme(
-#     panel.border = element_rect(color = 'black', fill = NA),
-#     panel.background = element_blank(),
-#     legend.title = element_blank(),
-#     legend.text = element_text(size = 10, color = 'black'),
-#     legend.box.background = element_rect(color = 'black', fill = NA),
-#     legend.position = 'inside',
-#     legend.position.inside = c(0.2,0.7),
-#     axis.text.x = element_text(size = 10, color = 'black'),
-#     axis.title.x = element_blank(),
-#     axis.title.y = element_text(size = 10, color = 'black'),
-#     axis.text.y = element_text(size = 10, color = 'black')
-#   ) +
-#   labs(y = expression(Orthogroup~count~(log[10])))
-# stats
 
 stats <- ggplot(data = plt_all_stats %>% dplyr::filter(type != "ALL")) +
   geom_col(aes(x = metric, y = value, fill = type), position = "dodge") +
@@ -772,7 +751,7 @@ stats <- ggplot(data = plt_all_stats %>% dplyr::filter(type != "ALL")) +
 stats
 
 # Save the figure
-# ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
+ggsave("../../figures/supplementary/gene_family_OG_stats.png", stats, width = 7.5, height = 7.5, dpi = 600)
 
 
 

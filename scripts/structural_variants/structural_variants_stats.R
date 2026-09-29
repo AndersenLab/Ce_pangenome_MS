@@ -105,7 +105,7 @@ ggsave("../../figures/supplementary/structural_variant_countProportion.png", fin
 
 
 #############################################################################
-# How does SV count correlate with SNP count?
+# How does SV count correlate with SNV count?
 #############################################################################
 sv_strain_count <- filt_calls %>% dplyr::distinct(strain,sv_type,type_count) %>% dplyr::group_by(strain) %>% dplyr::mutate(all_sv_count = sum(type_count)) %>% dplyr::distinct(strain,all_sv_count) %>%
   dplyr::filter(strain != "CGC1") # we do not have SNP calls for CGC1
@@ -135,7 +135,7 @@ snp_sv_corr <- ggplot(sv_snp_strains, aes(x = all_sv_count, y = snp_count)) +
   geom_point(size = 1) +
   geom_smooth(method = "lm", se = TRUE, color = "blue", linetype = "dashed", alpha = 0.2, linewidth = 0.5) + # minimizes the sum of squared residuals, or ordinary least squares
   annotate("text", x = 6000, y = 3.5e5, label = paste0("slope = ", slope, "\nR² = ", r_squared), size = 6, hjust = 0) +
-  labs(x = "SV count", y = "SNP count") +
+  labs(x = "SV count", y = "SNV count") +
   theme(
     panel.border = element_rect(color = 'black', fill = NA),
     panel.background = element_blank(),
@@ -147,7 +147,7 @@ snp_sv_corr <- ggplot(sv_snp_strains, aes(x = all_sv_count, y = snp_count)) +
 snp_sv_corr
 
 # Save the plot
-ggsave("../../figures/supplementary/sv_snp_correlation.png", snp_sv_corr, width = 7.5, height = 7.5, dpi = 600)
+ggsave("../../figures/supplementary/sv_snv_correlation.png", snp_sv_corr, width = 7.5, height = 7.5, dpi = 600)
 
 
 
@@ -871,9 +871,6 @@ centers <- arm_domains %>%
   dplyr::mutate(start = ifelse(is.na(start),lead(start), start),
                 end = ifelse(is.na(end), lag(end),end)) %>%
   dplyr::distinct(chrom, start, end)
-
-region_colors <- c("Tip" = "#5E3C99", "Center" = "#FDB863", "Arm" = "#4393C3")
-
 
 # COLOR CHROMOSOME DOMAINS FROM ARMS, CENTERS, AND TIPS
 sv_coverge_plt <- ggplot(all_collapsed_svs) + 
