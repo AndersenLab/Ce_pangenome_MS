@@ -25,7 +25,7 @@ wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv")
 # ========================================================================================================================================================================================================= #
 hdr_chrom = "V"
 hdr_start_pos = 16198034 - 22000
-hdr_end_pos = 16198034 + 22000
+hdr_end_pos = 16198034 + 32000
 # hdr_start_pos = 15658959 # qtl start
 # hdr_end_pos = 18046079 # qtl end
 
@@ -76,8 +76,8 @@ all_pheno_asm <- traits %>% dplyr::select(strain,  `Abamectin_q90.TOF_ctrl-regre
 
 pxg <- ggplot(all_pheno_asm %>% dplyr::mutate(abam_gt = factor(abam_gt, levels = c("REF","ALT")))) +
   geom_boxplot(aes(x = abam_gt, y = abam_q90_TOF), outliers = FALSE) +
-  geom_jitter(aes(x = abam_gt, y = abam_q90_TOF, color = we_have_asm), width = 0.2, size = 1) +
-  scale_color_manual(values = c("TRUE" = "red", "FALSE" = "black")) +
+  geom_jitter(aes(x = abam_gt, y = abam_q90_TOF, fill = we_have_asm), shape = 21, color = 'black', width = 0.2, size = 1) +
+  scale_fill_manual(values = c("TRUE" = "black", "FALSE" = "white")) +
   theme(
     legend.position = 'none',
     panel.background = element_blank(),
@@ -272,7 +272,7 @@ pheno_dotplot <- cowplot::plot_grid(
   labels = c("a","b"))
 
 # Save the plot
-# ggsave("../../figures/supplementary/pheno_spread_dotplot_GWAS.png", pheno_dotplot, width = 7.5, height = 7.5, dpi = 600)
+# ggsave("../../figures/supplementary/pheno_spread_dotplot_GWAS.png", pheno_dotplot, width = 7.5, height = 6, dpi = 600)
 
 
 #get the minimum and maximum boundary of the WILD genome alignments that contain the HDR
@@ -816,7 +816,7 @@ all_hap_bg <- ggplot() +
     legend.key.size = unit(0.4, "lines"),
     legend.text = element_text(size = 10),
     legend.title = element_text(size = 10)) +
-  guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 4)))
+  guides(fill = guide_legend(title.position = "top", nrow = 21, byrow = TRUE, override.aes = list(size = 4)))
 all_hap_bg
 
 # Save plot:
@@ -946,115 +946,112 @@ alt_orthos <- orthos %>% dplyr::select(Orthogroup, all_of(alt_strains)) %>%
 
 
 
+# # ================================================================================================================ #
+# # Adjusting to align all orthologous genes
+# # ================================================================================================================ #
+# alt_strains <- tail(want, 17) 
+# first_del_ext <- c("str-106", "srh-277", "F11A5.9", "glc-1")
+# 
+# plot_ad_aln <- plot_ad %>% 
+#   dplyr::mutate(adjust_gene_pos = ifelse(STRAIN %in% alt_strains[alt_strains != "ECA36" &  alt_strains != "N2"], TRUE, FALSE)) %>%
+#   dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), start + 12000, start),
+#                 end_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), end + 12000, end)) %>%
+#   dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), start + 4000, start_adj),
+#                  end_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), end + 4000, end_adj)) %>%
+#   dplyr::mutate(start_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), start_adj + 6000, start_adj),
+#                 end_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), end_adj + 6000, end_adj)) %>%
+#   dplyr::select(-start,-end)
+# 
+# hlines_adj <- plot_ad_aln %>% dplyr::select(STRAIN, start_adj, end_adj, y_pos) %>% 
+#   dplyr::group_by(STRAIN) %>%
+#   dplyr::mutate(start = min(start_adj, na.rm = TRUE), 
+#                 end = max(end_adj, na.rm = TRUE)) %>%
+#   dplyr::ungroup() %>%
+#   dplyr::distinct(STRAIN, start, end, y_pos)
+# 
+# # Update the trapeziums
+# trapeziums_adj <- dplyr::inner_join(
+#   plot_ad_aln, plot_ad_aln,
+#   by = "alias",
+#   suffix = c("_upper", "_lower"),
+#   relationship = "many-to-many") %>% 
+#   dplyr::filter(y_pos_upper - y_pos_lower == 1)
+# 
+# # Create trapezium polygons using min/max for x-coordinates so that start/end orientation is corrected.
+# trapezium_polys_adj <- trapeziums_adj %>% 
+#   dplyr::rowwise() %>%
+#   do({
+#     # Calculate corrected x coordinates for the upper rectangle
+#     x_left_upper <- min(.$start_adj_upper, .$end_adj_upper)
+#     x_right_upper <- max(.$start_adj_upper, .$end_adj_upper)
+#     
+#     # Calculate corrected x coordinates for the lower rectangle
+#     x_left_lower <- min(.$start_adj_lower, .$end_adj_lower)
+#     x_right_lower <- max(.$start_adj_lower, .$end_adj_lower)
+#     
+#     data.frame(
+#       alias = .$alias,
+#       group = paste(.$alias, .$y_pos_upper, sep = "_"),
+#       x = c(x_left_upper, x_right_upper, x_right_lower, x_left_lower),
+#       y = c(.$y_pos_upper - 0.2,  # bottom edge of the upper rectangle
+#             .$y_pos_upper - 0.2,
+#             .$y_pos_lower + 0.2,  # top edge of the lower rectangle
+#             .$y_pos_lower + 0.2)
+#     )
+#   }) %>%
+#   dplyr::ungroup()
+# 
+# # Also update any other data frames with alias info, e.g. trapezium_polys:
+# trapezium_polys_adj <- trapezium_polys_adj %>%
+#   dplyr::mutate(alias = factor(alias, levels = ordered_aliases))
+# 
+# # Create the final aligned plot!
+# all_hap_bg_aln <- ggplot() +
+#   geom_segment(data = hlines_adj,
+#                aes(x = start, xend = end, y = y_pos, yend = y_pos)) +
+#   geom_polygon(data = trapezium_polys_adj,
+#                aes(x = x, y = y, group = group, fill = alias)) +
+#   geom_rect(data = plot_ad_aln %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
+#             aes(xmin = start_adj, xmax = end_adj, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias),color = "black") +
+#   annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
+#   annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
+#   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
+#   annotate("text", x = 14180, y = 49.8, label = "*", size = 12, color = "black") +
+#   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
+#   scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
+#   scale_color_identity()  +
+#   labs(fill="Reference\ngene")+
+#   theme(
+#     panel.background = element_blank(),
+#     axis.title = element_blank(),
+#     axis.text.y = element_text(size = 12, color = 'black'), 
+#     axis.text.x = element_blank(),
+#     axis.title.x = element_blank(),
+#     axis.ticks = element_blank(),
+#     axis.line.x = element_blank(),
+#     # legend.position = 'none',
+#     legend.position = "right",
+#     legend.direction = "horizontal",
+#     legend.key.size = unit(0.4, "lines"),
+#     legend.text = element_text(size = 16),
+#     legend.title = element_text(size = 16)) +
+#   guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
+# all_hap_bg_aln
 
 
 
 
-# ================================================================================================================ #
-# Adjusting to align all orthologous genes
-# ================================================================================================================ #
-alt_strains <- tail(want, 17) 
-first_del_ext <- c("str-106", "srh-277", "F11A5.9", "glc-1")
-
-plot_ad_aln <- plot_ad %>% 
-  dplyr::mutate(adjust_gene_pos = ifelse(STRAIN %in% alt_strains[alt_strains != "ECA36" &  alt_strains != "N2"], TRUE, FALSE)) %>%
-  dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), start + 12000, start),
-                end_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), end + 12000, end)) %>%
-  dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), start + 4000, start_adj),
-                 end_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), end + 4000, end_adj)) %>%
-  dplyr::mutate(start_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), start_adj + 6000, start_adj),
-                end_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), end_adj + 6000, end_adj)) %>%
-  dplyr::select(-start,-end)
-
-hlines_adj <- plot_ad_aln %>% dplyr::select(STRAIN, start_adj, end_adj, y_pos) %>% 
-  dplyr::group_by(STRAIN) %>%
-  dplyr::mutate(start = min(start_adj, na.rm = TRUE), 
-                end = max(end_adj, na.rm = TRUE)) %>%
-  dplyr::ungroup() %>%
-  dplyr::distinct(STRAIN, start, end, y_pos)
-
-# Update the trapeziums
-trapeziums_adj <- dplyr::inner_join(
-  plot_ad_aln, plot_ad_aln,
-  by = "alias",
-  suffix = c("_upper", "_lower"),
-  relationship = "many-to-many") %>% 
-  dplyr::filter(y_pos_upper - y_pos_lower == 1)
-
-# Create trapezium polygons using min/max for x-coordinates so that start/end orientation is corrected.
-trapezium_polys_adj <- trapeziums_adj %>% 
-  dplyr::rowwise() %>%
-  do({
-    # Calculate corrected x coordinates for the upper rectangle
-    x_left_upper <- min(.$start_adj_upper, .$end_adj_upper)
-    x_right_upper <- max(.$start_adj_upper, .$end_adj_upper)
-    
-    # Calculate corrected x coordinates for the lower rectangle
-    x_left_lower <- min(.$start_adj_lower, .$end_adj_lower)
-    x_right_lower <- max(.$start_adj_lower, .$end_adj_lower)
-    
-    data.frame(
-      alias = .$alias,
-      group = paste(.$alias, .$y_pos_upper, sep = "_"),
-      x = c(x_left_upper, x_right_upper, x_right_lower, x_left_lower),
-      y = c(.$y_pos_upper - 0.2,  # bottom edge of the upper rectangle
-            .$y_pos_upper - 0.2,
-            .$y_pos_lower + 0.2,  # top edge of the lower rectangle
-            .$y_pos_lower + 0.2)
-    )
-  }) %>%
-  dplyr::ungroup()
-
-# Also update any other data frames with alias info, e.g. trapezium_polys:
-trapezium_polys_adj <- trapezium_polys_adj %>%
-  dplyr::mutate(alias = factor(alias, levels = ordered_aliases))
-
-# Create the final aligned plot!
-all_hap_bg_aln <- ggplot() +
-  geom_segment(data = hlines_adj,
-               aes(x = start, xend = end, y = y_pos, yend = y_pos)) +
-  geom_polygon(data = trapezium_polys_adj,
-               aes(x = x, y = y, group = group, fill = alias)) +
-  geom_rect(data = plot_ad_aln %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
-            aes(xmin = start_adj, xmax = end_adj, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias),color = "black") +
-  annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
-  annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
-  scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
-  annotate("text", x = 14180, y = 49.8, label = "*", size = 12, color = "black") +
-  scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
-  scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
-  scale_color_identity()  +
-  labs(fill="Reference\ngene")+
-  theme(
-    panel.background = element_blank(),
-    axis.title = element_blank(),
-    axis.text.y = element_text(size = 12, color = 'black'), 
-    axis.text.x = element_blank(),
-    axis.title.x = element_blank(),
-    axis.ticks = element_blank(),
-    axis.line.x = element_blank(),
-    # legend.position = 'none',
-    legend.position = "right",
-    legend.direction = "horizontal",
-    legend.key.size = unit(0.4, "lines"),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16)) +
-  guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
-all_hap_bg_aln
-
-
-
-
+################ ADD PSEUDOGENES FOR WILD STRAINS (CHECK TO SEE IF THEY ARE EXPRESSED) AND ADD OVERLAPPING N2 GENES AS DIFFERENT COLUMNS - EXPRESSION EVIDENCE IN WILD STRAINS???
 # Make all genes the same size and in the exact same position for orthologs across all strains
 updated_gene_sizes <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::select(alias, start, end) %>% 
-  dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
+  dplyr::filter(!is.na(alias)) %>% # ADD BACK SRZ-13 AND SRZ-14 - they both have distal orthologs in only some strains...
   dplyr::arrange(start) %>%
   dplyr::mutate(
-    new_start = cumsum(c(0, rep(3000, n() - 1))),
-    new_end = new_start + 1000) # making genes evenly spaces
+    new_start = cumsum(c(0, rep(1000, n() - 1))),
+    new_end = new_start + 500) # making genes evenly spaces
 
 plot_ad_new <- plot_ad %>% 
-  dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
+  dplyr::filter(!is.na(alias)) %>% # For visualization purposes
   dplyr::left_join(updated_gene_sizes, by = "alias") %>%
   dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
   dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) %>%
@@ -1069,7 +1066,21 @@ hlines_new <- plot_ad_new %>% dplyr::select(STRAIN, new_start, new_end, y_pos) %
 
 gene_labels <- plot_ad_new %>% dplyr::mutate(middle = (new_start + new_end) / 2) %>%
   dplyr::distinct(alias, middle) %>%
-  dplyr::mutate(geno = factor("REF", levels = c("REF", "ALT")))  # Factor, not character!
+  dplyr::mutate(geno = factor("REF", levels = c("REF", "ALT")))
+
+
+
+# Filling genes by %IDY with N2 
+n2_genes_interval <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::distinct(tranname) %>% dplyr::filter(tranname != "transcript_K05D4.6b.1" & tranname != "transcript_F11A5.5a.1") %>% 
+  dplyr::pull() %>% c("transcript_K05D4.6a.1") %>% c("transcript_F11A5.5b.1")
+
+orthos_interval <- orthos %>% dplyr::select(Orthogroup, all_of(want)) %>%
+  tidyr::separate_rows(N2, sep = ", ") %>%
+  dplyr::filter(N2 %in% n2_genes_interval) %>%
+  dplyr::pull(Orthogroup) %>% unique()
+
+  
+  
 
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
@@ -1088,9 +1099,9 @@ all_hap_bg_new <- ggplot() +
         element_rect(fill = "black", color = "black"),
         element_rect(fill = "red", color = "black")),
       text_y = list(
-        element_text(angle = 90, size = 11, color = "white"),
-        element_text(angle = 90, size = 11, color = "white")))) +
-  geom_text(data = gene_labels, aes(x = middle, y = 52, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
+        element_text(angle = 90, size = 14, color = "white", face = "bold"),
+        element_text(angle = 90, size = 14, color = "white", face = "bold")))) +
+  # geom_text(data = gene_labels, aes(x = middle, y = 52, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
   theme(
     panel.background = element_blank(),
     axis.title = element_blank(),
@@ -1100,16 +1111,29 @@ all_hap_bg_new <- ggplot() +
     axis.ticks = element_blank(),
     axis.line.x = element_blank(),
     legend.position = 'none',
-    # strip.placement = "outside",           # Place strip outside the axis
-    strip.background = element_rect(fill = "grey85", color = "black"),  # Optional styling
+    # strip.placement = "outside",           
+    strip.background = element_rect(fill = "grey85", color = "black"), 
     strip.text.y.left = element_text(angle = 90, size = 11)) +
-    # legend.position = "right",
-    # legend.direction = "horizontal",
-    # legend.key.size = unit(0.4, "lines"),
-    # legend.text = element_text(size = 16),
-    # legend.title = element_text(size = 16)) +
   guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
 all_hap_bg_new
+
+
+label_plot <- ggplot(gene_labels) +
+  geom_text(aes(x = middle, y = 0, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
+  scale_x_continuous(expand = c(0.01, 0), limits = range(c(hlines_new$start, hlines_new$end))) +
+  scale_y_continuous(expand = c(0, 1), limits = c(0, 1)) +
+  theme_void()
+
+# Combine using cowplot
+final_labeled_plt <- cowplot::plot_grid(
+  label_plot,
+  all_hap_bg_new,
+  ncol = 1,
+  rel_heights = c(0.03, 0.85),
+  align = "v",
+  axis = "lr"
+)
+final_labeled_plt
 
 
 
