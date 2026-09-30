@@ -95,21 +95,21 @@ want <- abam_traits %>% dplyr::filter(extreme == "YES") %>% dplyr::arrange(desc(
 # Visualizing abamectin haplotype
 # ========================================================================================================================================================================================================= #
 # Load in gneome-genome alignments
-transformed_coords <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/synteny_vis/elegans/nucmer_aln_WSs/142_nucmer_ECA741CGC1.tsv",col_names = F) 
+transformed_coords <- readr::read_tsv("../../processed_data/genome_resources/genome_data/141_nucmer_ECA741CGC1.tsv",col_names = F) 
 colnames(transformed_coords) <- c("S1","E1","S2","E2","L1","L2","IDY","LENR","LENQ","REF","HIFI","STRAIN") 
 transformed_coords <- transformed_coords %>% dplyr::filter(STRAIN != "ECA396") %>%
   dplyr::filter(STRAIN %in% want)
 
 # Read in gene models
-gffCat1 <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/geneAnno-nf/142strain_genemRNAfeatures.tsv", col_names = F)
+gffCat1 <- readr::read_tsv("../../processed_data/genome_resources/annotation/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv", col_names = F)
 colnames(gffCat1) <- c("seqid","source","type","start","end","score","strand","phase","attributes","STRAIN")
-gffCat2 <- ape::read.gff("/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/processed_data/misc/N2.WBonly.WS283.PConly.gff3") %>% dplyr::mutate(STRAIN="N2")
+gffCat2 <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3") %>% dplyr::mutate(STRAIN="N2")
 gffCat <- rbind(gffCat1 %>% dplyr::filter(STRAIN != "ECA396"), gffCat2) %>% 
   dplyr::filter(STRAIN %in% want)
 
 
 # Read in orthogroups
-orthos <- readr::read_tsv("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/orthofinder/64_core/OrthoFinder/Results_Dec07/Orthogroups/Orthogroups.tsv")
+orthos <- readr::read_tsv("../../processed_data/orthology/orthofinder/orthofinder_output/Orthogroups.tsv")
 strainCol <- colnames(orthos)
 ugh <- gsub(".20251012.inbred.blobFiltered.softMasked.braker.longestIso.protein","", strainCol)
 ugh2 <- gsub(".20251014.inbred.blobFiltered.softMasked.braker.longestIso.protein","", ugh)
@@ -1077,10 +1077,33 @@ n2_genes_interval <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::distin
 orthos_interval <- orthos %>% dplyr::select(Orthogroup, all_of(want)) %>%
   tidyr::separate_rows(N2, sep = ", ") %>%
   dplyr::filter(N2 %in% n2_genes_interval) %>%
-  dplyr::pull(Orthogroup) %>% unique()
+  dplyr::distinct(Orthogroup)
 
+write.table(orthos_interval, "../../processed_data/gwas/interval_orthogroups.tsv", quote = F, col.names = F, row.names = F)
+
+
+library(Biostrings)
+
+aln <- readAAStringSet("single_copy_orthologs.fasta")
+
+n2 <- aln["N2"]
+
+identity <- sapply(names(aln), function(strain) {
   
+  seq <- aln[strain]
   
+  # Only compare positions where neither sequence has a gap
+  keep <- as.character(n2) != "-" & as.character(seq) != "-"
+  
+  mean(
+    strsplit(as.character(n2), "")[[1]][keep] ==
+    strsplit(as.character(seq), "")[[1]][keep]
+  ) * 100
+})
+
+identity
+
+
 
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
