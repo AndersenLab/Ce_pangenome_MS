@@ -7,6 +7,7 @@ library(cowplot)
 library(ape)
 library(data.table)
 library(stringr)
+library(ggh4x)
 
 # ========================================================================================================================================================================================================= #
 # Load in abamectin and ivermectin trait data
@@ -1045,40 +1046,38 @@ all_hap_bg_aln
 
 
 # Make all genes the same size and in the exact same position for orthologs across all strains
-updated_gene_sizes <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::select(alias, start, end) %>% dplyr::mutate(middle_gene = (start + end) / 2,
-                                                                                  new_start = middle_gene - 500,
-                                                                                  new_end = middle_gene + 500)
+updated_gene_sizes <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::select(alias, start, end) %>% 
+  dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
+  dplyr::arrange(start) %>%
+  dplyr::mutate(
+    new_start = cumsum(c(0, rep(3000, n() - 1))),
+    new_end = new_start + 1000) # making genes evenly spaces
 
 plot_ad_new <- plot_ad %>% 
-  dplyr::left_join(updated_gene_sizes, by = "alias") %>%
   dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
+  dplyr::left_join(updated_gene_sizes, by = "alias") %>%
   dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
-  dplyr::mutate(geno = factor(geno, levels = c("REF","ALT")))
+  dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) %>%
+  dplyr::select(STRAIN, alias, start = start.x, end = end.x, new_start, new_end, geno, y_pos) 
 
 hlines_new <- plot_ad_new %>% dplyr::select(STRAIN, new_start, new_end, y_pos) %>% 
-  dplyr::group_by(STRAIN) %>%
   dplyr::mutate(start = min(new_start, na.rm = TRUE), 
                 end = max(new_end, na.rm = TRUE)) %>%
-  dplyr::ungroup() %>%
   dplyr::distinct(STRAIN, start, end, y_pos) %>%
   dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
   dplyr::mutate(geno = factor(geno, levels = c("REF","ALT")))
 
-
-library(ggh4x)
+gene_labels <- plot_ad_new %>% dplyr::mutate(middle = (new_start + new_end) / 2) %>%
+  dplyr::distinct(alias, middle) %>%
+  dplyr::mutate(geno = factor("REF", levels = c("REF", "ALT")))  # Factor, not character!
 
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
   geom_segment(data = hlines_new,
                aes(x = start, xend = end, y = y_pos, yend = y_pos)) +
-  # geom_polygon(data = trapezium_polys_adj,
-               # aes(x = x, y = y, group = group, fill = alias)) +
   geom_rect(data = plot_ad_new %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
             aes(xmin = new_start, xmax = new_end, ymin = y_pos + 0.4, ymax = y_pos - 0.4, fill = alias),color = "black") +
-  # annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
-  # annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
-  # annotate("text", x = 14180, y = 49.8, label = "*", size = 12, color = "black") +
   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
   scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
   scale_color_identity()  +
@@ -1091,7 +1090,7 @@ all_hap_bg_new <- ggplot() +
       text_y = list(
         element_text(angle = 90, size = 11, color = "white"),
         element_text(angle = 90, size = 11, color = "white")))) +
-  # facet_grid(geno ~ ., scales = "free_y", space = "free_y", switch = "y") +  # Changed to facet_grid with switch
+  geom_text(data = gene_labels, aes(x = middle, y = 52, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
   theme(
     panel.background = element_blank(),
     axis.title = element_blank(),
@@ -1100,15 +1099,15 @@ all_hap_bg_new <- ggplot() +
     axis.title.x = element_blank(),
     axis.ticks = element_blank(),
     axis.line.x = element_blank(),
-    # legend.position = 'none',
+    legend.position = 'none',
     # strip.placement = "outside",           # Place strip outside the axis
     strip.background = element_rect(fill = "grey85", color = "black"),  # Optional styling
-    strip.text.y.left = element_text(angle = 90, size = 11),
-    legend.position = "right",
-    legend.direction = "horizontal",
-    legend.key.size = unit(0.4, "lines"),
-    legend.text = element_text(size = 16),
-    legend.title = element_text(size = 16)) +
+    strip.text.y.left = element_text(angle = 90, size = 11)) +
+    # legend.position = "right",
+    # legend.direction = "horizontal",
+    # legend.key.size = unit(0.4, "lines"),
+    # legend.text = element_text(size = 16),
+    # legend.title = element_text(size = 16)) +
   guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
 all_hap_bg_new
 
