@@ -8,6 +8,7 @@ library(ape)
 library(data.table)
 library(stringr)
 library(ggh4x)
+library(Biostrings)
 
 # ========================================================================================================================================================================================================= #
 # Load in abamectin and ivermectin trait data
@@ -1079,43 +1080,85 @@ orthos_interval <- orthos %>% dplyr::select(Orthogroup, all_of(want)) %>%
   dplyr::filter(N2 %in% n2_genes_interval) %>%
   dplyr::distinct(Orthogroup)
 
-write.table(orthos_interval, "../../processed_data/gwas/interval_orthogroups.tsv", quote = F, col.names = F, row.names = F)
+# write.table(orthos_interval, "../../processed_data/gwas/interval_orthogroups.tsv", quote = F, col.names = F, row.names = F)
+
+# write.table(data.frame(strains = want), "../../processed_data/gwas/strains.tsv", sep = "\t", row.names = FALSE, col.names = F, quote = FALSE)
 
 
-library(Biostrings)
 
-aln <- readAAStringSet("single_copy_orthologs.fasta")
+# OG MSA files
+ogs <- list.files("../../processed_data/gwas", pattern = "^OG.*\\.MSA.fa$", full.names = TRUE)
 
-n2 <- aln["N2"]
-
-identity <- sapply(names(aln), function(strain) {
+# Calculate percent IDY between each wild strain ortholog and N2
+msa_idy <- lapply(ogs, function(file) {
   
-  seq <- aln[strain]
+  og <- tools::file_path_sans_ext(basename(file))
   
-  # Only compare positions where neither sequence has a gap
-  keep <- as.character(n2) != "-" & as.character(seq) != "-"
+  aln <- readAAStringSet(file)
   
-  mean(
-    strsplit(as.character(n2), "")[[1]][keep] ==
-    strsplit(as.character(seq), "")[[1]][keep]
-  ) * 100
-})
+  # Extract strain name from sequence IDs
+  strain <- sub("_.*$", "", names(aln))
+  
+  # Keep desired strains
+  aln <- aln[strain %in% want]
+  strain <- strain[strain %in% want]
+  
+  # Find N2
+  n2 <- aln[strain == "N2"]
+  
+  identity <- sapply(setdiff(unique(strain), "N2"), function(s) {
+    
+    seq <- aln[strain == s][1]
+    
+    n2_chars <- strsplit(as.character(n2), "")[[1]]
+    seq_chars <- strsplit(as.character(seq), "")[[1]]
+    
+    # Check alignment length
+    if (length(n2_chars) != length(seq_chars)) {
+      warning(
+        og, ": ", s,
+        " has alignment length ", length(seq_chars),
+        " vs N2 length ", length(n2_chars)
+      )
+      return(NA_real_)
+    }
+    
+    # Only compare positions where neither sequence has a gap
+    keep <- n2_chars != "-" & seq_chars != "-"
+    
+    mean(n2_chars[keep] == seq_chars[keep]) * 100
+  })
+  
+  # Add N2 = 100
+  identity <- c(N2 = 100, identity)
+  
+  data.frame(orthogroup = og, t(identity), check.names = FALSE)
+}) %>% dplyr::bind_rows()
 
-identity
 
+# Pivot for left merging and plotting
+og_idy_long <- msa_idy %>% tidyr::pivot_longer(-orthogroup, names_to = "strain", values_to = "identity") %>%
+  dplyr::mutate(orthogroup = gsub("^[^_]+_", "", orthogroup),
+                orthogroup = gsub(".MSA", "", orthogroup)) %>%
+  dplyr::rename(tranname = orthogroup) %>%
+  dplyr::left_join(N2_tran_reg, by = "tranname") %>%
+  dplyr::distinct(STRAIN = strain, identity, alias)
+
+
+plot_ad_new_idy <- plot_ad_new %>% dplyr::left_join(og_idy_long, by = c("STRAIN", "alias")) %>% dplyr::mutate(identity = as.numeric(as.character(identity)))
 
 
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
   geom_segment(data = hlines_new,
                aes(x = start, xend = end, y = y_pos, yend = y_pos)) +
-  geom_rect(data = plot_ad_new %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
-            aes(xmin = new_start, xmax = new_end, ymin = y_pos + 0.4, ymax = y_pos - 0.4, fill = alias),color = "black") +
+  geom_rect(data = plot_ad_new_idy %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
+            aes(xmin = new_start, xmax = new_end, ymin = y_pos + 0.4, ymax = y_pos - 0.4, fill = identity),color = "black") +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
-  scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
-  scale_color_identity()  +
-  labs(fill="Reference\ngene") +
+  scale_fill_gradientn(colors = c("yellow", "blue")) +
+  # scale_color_identity()  +
+  labs(fill="Percent\nidentity (%)") +
   ggh4x::facet_grid2(geno ~ ., scales = "free_y", space = "free_y", switch = "y",
     strip = ggh4x::strip_themed(
       background_y = list(
@@ -1133,11 +1176,11 @@ all_hap_bg_new <- ggplot() +
     axis.title.x = element_blank(),
     axis.ticks = element_blank(),
     axis.line.x = element_blank(),
-    legend.position = 'none',
+    # legend.position = 'none',
     # strip.placement = "outside",           
     strip.background = element_rect(fill = "grey85", color = "black"), 
     strip.text.y.left = element_text(angle = 90, size = 11)) +
-  guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
+  guides(fill = guide_colorbar(title.position = "top", byrow = TRUE, override.aes = list(size = 9)))
 all_hap_bg_new
 
 
@@ -1154,9 +1197,139 @@ final_labeled_plt <- cowplot::plot_grid(
   ncol = 1,
   rel_heights = c(0.03, 0.85),
   align = "v",
-  axis = "lr"
-)
+  axis = "lr")
 final_labeled_plt
+
+
+
+
+
+
+
+# Tile plot of SNVs
+interval_snvs <- readr::read_tsv("../../processed_data/gwas/SNVs_in_Interval.tsv") %>%
+  dplyr::mutate(dplyr::across(4:last_col(), ~ dplyr::case_when(
+    .x == "0/0" ~ "0",
+    .x == "1/1" ~ "1",
+    .x == "./." ~ NA_character_,
+    TRUE ~ .x))) %>%
+  dplyr::select(-CHROM,-REF,-ALT, -N2) 
+
+interval_snv_nonMissing <- interval_snvs %>% dplyr::filter(dplyr::if_all(4:last_col(), ~ !is.na(.x))) %>%
+  dplyr::select(-CHROM,-REF,-ALT, -N2) %>%
+  dplyr::mutate(alt_specific = dplyr::if_all(
+      dplyr::all_of(alt_strains[alt_strains != "N2"]), ~ .x == 1) &
+      dplyr::if_all(dplyr::all_of(setdiff(want, alt_strains)), ~ .x == 0))
+
+alt_specific <- interval_snv_nonMissing %>% dplyr::select(POS, alt_specific) %>% dplyr::filter(alt_specific == "TRUE") %>%
+  dplyr::mutate(seqid = "V")
+
+pos <- interval_snv_nonMissing$POS
+
+snv_nonMissing_long <- interval_snv_nonMissing %>%
+  dplyr::select(-POS, -alt_specific) %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(pos) %>%
+  tibble::rownames_to_column("strain") %>%
+  tidyr::pivot_longer(
+    cols = -strain,
+    names_to = "POS",
+    values_to = "genotype") %>%
+  dplyr::mutate(POS = as.numeric(POS)) %>%
+  dplyr::mutate(strain = factor(strain, levels = rev(want[want != "N2"]))) %>%
+  dplyr::mutate(genotype = ifelse(genotype == "0", "REF", "ALT"))
+
+n2_genes_ROI <- gffCat2 %>% dplyr::filter(seqid == "V", start >= (16198034 - 22000) & end <=(16198034 + 32000), type == "gene") 
+
+genes_interval <- ggplot(n2_genes_ROI) +
+  geom_hline(yintercept = 1) +
+  geom_rect(aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0.9, ymax = 1.1)) +
+  geom_vline(xintercept = 16198034 / 1e6, color = 'red', linetype = 'solid') +
+  geom_rect(data = alt_specific, aes(xmin = (POS - 10) / 1e6, xmax = (POS + 10) / 1e6, ymin = 0.8, ymax = 1.2), fill = "magenta3") +
+  scale_y_continuous(expand = c(0,0)) +
+  theme(panel.background = element_blank(),
+        panel.border = element_blank(),
+        axis.text = element_blank(),
+        axis.ticks = element_blank())
+genes_interval 
+
+# Adding gene labels
+n2_gene_name_pos <- N2_tran %>% dplyr::left_join(n2_genes_ROI, by = c("seqid","start","end")) %>% dplyr::filter(!is.na(STRAIN.y)) %>%
+  dplyr::filter(tranname %in% n2_genes_interval) %>%
+  dplyr::mutate(middle = (start + end) / 2) %>%
+  dplyr::select(alias, middle)
+
+label_plot_2 <- ggplot(n2_gene_name_pos) +
+  geom_text(aes(x = middle, y = 0, label = alias), angle = 75, size = 2, hjust = 0.5, vjust = 0.5) +
+  scale_x_continuous(expand = c(0.08,0.08)) +
+  scale_y_continuous(expand = c(0,0)) +
+  theme_void() +
+  theme(plot.margin = margin(l = 5, r = 5, t = 5, b = -27))
+# label_plot_2
+
+snvs_interval_plt <- ggplot(snv_nonMissing_long %>% dplyr::filter(POS >= min(n2_genes_ROI$start) & POS <= max(n2_genes_ROI$end)), 
+                            aes(x = POS / 1e6, y = strain, fill = genotype)) +
+  geom_tile() +
+  scale_fill_manual(values = c("REF" = "white", "ALT" = "red")) +
+  scale_x_continuous(labels = scales::comma) +
+  theme_minimal() +
+  theme(
+    axis.title.y = element_blank(),
+    axis.title.x = element_text(size = 11, color = 'black'),
+    axis.text.x = element_text(size = 10, color = 'black'),
+    axis.text.y = element_text(size = 9, color = 'black'),
+    panel.border = element_rect(color = "black", fill = NA),
+    panel.grid = element_blank()) +
+  labs(x = "N2 genomic position (Mb)", fill = "Genotype")
+# snvs_interval_plt
+
+# Creating the final, labeled plot
+top <- cowplot::plot_grid(
+  label_plot_2, genes_interval,
+  align = "v",
+  nrow = 2)
+
+final_plt <- cowplot::plot_grid(
+  top, snvs_interval_plt,
+  align = "v",
+  nrow = 2,
+  rel_heights = c(0.3, 1)) + theme(plot.background = element_rect(fill = "white", color = NA))
+
+ggsave("/vast/eande106/projects/Lance/THESIS_WORK/misc/TESTER.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
+
+
+
+# Which gene has the most ALT-specific SNVs?
+snvs_per_gene <- n2_genes_ROI %>%
+  dplyr::mutate(gene_id = dplyr::row_number()) %>%
+  dplyr::inner_join(
+    alt_specific,
+    by = "seqid",
+    relationship = "many-to-many"
+  ) %>%
+  dplyr::filter(
+    POS >= start,
+    POS <= end
+  ) %>%
+  dplyr::count(gene_id, seqid, start, end, name = "n_snvs") %>%
+  dplyr::arrange(desc(n_snvs)) %>% dplyr::left_join(N2_tran, by = c('seqid','start','end')) %>%
+  dplyr::distinct(seqid, start, end, n_snvs, alias)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
