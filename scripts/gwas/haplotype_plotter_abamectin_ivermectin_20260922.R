@@ -26,7 +26,7 @@ wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv")
 # ========================================================================================================================================================================================================= #
 hdr_chrom = "V"
 hdr_start_pos = 16198034 - 22000
-hdr_end_pos = 16198034 + 32000
+hdr_end_pos = 16198034 + 42000
 # hdr_start_pos = 15658959 # qtl start
 # hdr_end_pos = 18046079 # qtl end
 
@@ -658,7 +658,9 @@ all_ad <- rbind(N2_ad_corr,WI_ad) %>%
 
 hlines <- new_boundaries %>% 
   dplyr::left_join(all_ad %>% dplyr::select(STRAIN,y_pos) %>% dplyr::distinct(STRAIN,.keep_all = T),by="STRAIN") %>%
-  dplyr::left_join(all_ad %>% dplyr::select(STRAIN,shift) %>% dplyr::distinct(STRAIN,.keep_all = T),by="STRAIN")
+  dplyr::left_join(all_ad %>% dplyr::select(STRAIN,shift) %>% dplyr::distinct(STRAIN,.keep_all = T),by="STRAIN") #%>%
+  # dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
+  # dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) 
 
 segments <- all_ortho_pairs_bound %>%
   dplyr::select(STRAIN,Parent,start,end,N2,strand) %>%
@@ -712,13 +714,12 @@ all_hap
   # filter(alias != "non-ortho")
 
 # Join filtered data frames for many-to-many connections
-trapeziums <- inner_join(
+trapeziums <- dplyr::inner_join(
   plot_ad, plot_ad,
   by = "alias",
   suffix = c("_upper", "_lower"),
-  relationship = "many-to-many"
-) %>% 
-  filter(y_pos_upper - y_pos_lower == 1)
+  relationship = "many-to-many") %>% 
+  dplyr::filter(y_pos_upper - y_pos_lower == 1)
 
 # Create trapezium polygons using min/max for x-coordinates so that start/end orientation is corrected.
 trapezium_polys <- trapeziums %>% 
@@ -734,6 +735,7 @@ trapezium_polys <- trapeziums %>%
     
     data.frame(
       alias = .$alias,
+      strain_lower = .$STRAIN_lower,
       group = paste(.$alias, .$y_pos_upper, sep = "_"),
       x = c(x_left_upper, x_right_upper, x_right_lower, x_left_lower),
       y = c(.$y_pos_upper - 0.2,  # bottom edge of the upper rectangle
@@ -742,22 +744,26 @@ trapezium_polys <- trapeziums %>%
             .$y_pos_lower + 0.2)
     )
   }) %>%
-  ungroup()
+  dplyr::ungroup() %>%
+  dplyr::mutate(geno = ifelse(strain_lower %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) #%>%
+  # dplyr::mutate(geno = factor(geno, levels = c("REF","ALT")))
 
 # Extract unique aliases at y_pos 77 in order of increasing start position
 ordered_aliases <- plot_ad %>%
-  filter(y_pos == max(plot_ad$y_pos)) %>%
-  arrange(start) %>%
-  pull(alias) %>%
+  dplyr::filter(y_pos == max(plot_ad$y_pos)) %>%
+  dplyr::arrange(start) %>%
+  dplyr::pull(alias) %>%
   unique()
 
 # Reorder the factor levels so that the legend follows the ordered aliases
 plot_ad <- plot_ad %>%
-  mutate(alias = factor(alias, levels = ordered_aliases))
+  dplyr::mutate(alias = factor(alias, levels = ordered_aliases)) #%>%
+  # dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
+  # dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) 
 
 # Also update any other data frames with alias info, e.g. trapezium_polys:
 trapezium_polys <- trapezium_polys %>%
-  mutate(alias = factor(alias, levels = ordered_aliases))
+  dplyr::mutate(alias = factor(alias, levels = ordered_aliases))
 
 # Shuffle the assignment of colors to the ordered aliases
 set.seed(9) 
@@ -772,52 +778,60 @@ final_colors <- default_colors[ordered_aliases]
 # Optionally, if you have the "non-ortho" alias (or any other), add it explicitly:
 final_colors <- c(final_colors, "Unknown gene" = "darkgrey")
 
-plot_ad_segments <- plot_ad %>%
-  mutate(
-    # Adjust strand logic if inverted
-    strand_logic = case_when(
-      strand == "+" & !inv ~ "+",
-      strand == "-" & !inv ~ "-",
-      strand == "+" & inv  ~ "-",
-      strand == "-" & inv  ~ "+"),
-    seg_color = ifelse(strand_logic == "+", "black", "red"),
-    
-    x_start = start,
-    x_end   = end,
-    y_seg   = y_pos - 0.25  # just under the geom_rect (geom_rect is y_pos ± 0.2)
-  )
+# plot_ad_segments <- plot_ad %>%
+#   dplyr::mutate(
+#     # Adjust strand logic if inverted
+#     strand_logic = case_when(
+#       strand == "+" & !inv ~ "+",
+#       strand == "-" & !inv ~ "-",
+#       strand == "+" & inv  ~ "-",
+#       strand == "-" & inv  ~ "+"),
+#     seg_color = ifelse(strand_logic == "+", "black", "red"),
+#     
+#     x_start = start,
+#     x_end   = end,
+#     y_seg   = y_pos - 0.25  # just under the geom_rect (geom_rect is y_pos ± 0.2))
 
 # Create final plot
 all_hap_bg <- ggplot() +
   geom_segment(data = hlines, 
                aes(x = boundStart - shift, xend = boundEnd - shift, y = y_pos, yend = y_pos)) +
-  geom_polygon(data = trapezium_polys, 
+  geom_polygon(data = trapezium_polys,
                aes(x = x, y = y, group = group, fill = alias)) +
-  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
-            aes(xmin = start, xmax = end, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias),color = "black") +
+  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene", as.character(alias))),
+            aes(xmin = start, xmax = end, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias), color = "black") +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
-  annotate("text", x = 14180, y = 49.8, label = "*", size = 5, color = "black") +
+  # annotate("text", x = 14180, y = 49.8, label = "*", size = 5, color = "black") +
   scale_x_continuous(expand = c(0.01, 0), labels = function(x) x / 1000) +
   scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
   scale_color_identity()  +
-  labs(fill="Reference\ngene")+
+  # ggh4x::facet_grid2(geno ~ ., scales = "free_y", space = "free_y", switch = "y",
+                     # strip = ggh4x::strip_themed(
+                       # background_y = list(
+                         # element_rect(fill = "black", color = "black"),
+                         # element_rect(fill = "red", color = "black")),
+                       # text_y = list(
+                         # element_text(angle = 90, size = 14, color = "white", face = "bold"),
+                         # element_text(angle = 90, size = 14, color = "white", face = "bold")))) +
+  labs(fill="Reference\ngene") +
   xlab("Physical distance (kb)") +
   theme(
     panel.background = element_blank(),
     axis.title = element_blank(),
-    axis.text = element_text(size = 10, color = 'black'), 
+    axis.text = element_text(size = 11, color = 'black'), 
     axis.ticks.y = element_blank(),
     axis.line.x = element_line(),
+    panel.spacing.y = unit(0, "pt"),
     axis.title.x = element_text(color = 'black', size  = 14),
     # legend.position = 'none',
     legend.position = "right",
     legend.direction = "horizontal",
     legend.key.size = unit(0.4, "lines"),
-    legend.text = element_text(size = 10),
-    legend.title = element_text(size = 10)) +
-  guides(fill = guide_legend(title.position = "top", nrow = 21, byrow = TRUE, override.aes = list(size = 4)))
+    legend.text = element_text(size = 8, color = 'black', face = 'italic'),
+    legend.title = element_text(size = 10, color = 'black')) +
+  guides(fill = guide_legend(title.position = "top", nrow = 27, byrow = TRUE, override.aes = list(size = 2)))
 all_hap_bg
 
 # Save plot:
@@ -946,98 +960,6 @@ alt_orthos <- orthos %>% dplyr::select(Orthogroup, all_of(alt_strains)) %>%
 
 
 
-
-# # ================================================================================================================ #
-# # Adjusting to align all orthologous genes
-# # ================================================================================================================ #
-# alt_strains <- tail(want, 17) 
-# first_del_ext <- c("str-106", "srh-277", "F11A5.9", "glc-1")
-# 
-# plot_ad_aln <- plot_ad %>% 
-#   dplyr::mutate(adjust_gene_pos = ifelse(STRAIN %in% alt_strains[alt_strains != "ECA36" &  alt_strains != "N2"], TRUE, FALSE)) %>%
-#   dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), start + 12000, start),
-#                 end_adj = ifelse(adjust_gene_pos == TRUE & (alias == "glc-1" | alias == "F11A5.9"), end + 12000, end)) %>%
-#   dplyr::mutate(start_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), start + 4000, start_adj),
-#                  end_adj = ifelse(adjust_gene_pos == TRUE & (!alias %in% first_del_ext), end + 4000, end_adj)) %>%
-#   dplyr::mutate(start_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), start_adj + 6000, start_adj),
-#                 end_adj = ifelse(STRAIN == "ECA369" & (alias != "str-106" & alias != "srh-277"), end_adj + 6000, end_adj)) %>%
-#   dplyr::select(-start,-end)
-# 
-# hlines_adj <- plot_ad_aln %>% dplyr::select(STRAIN, start_adj, end_adj, y_pos) %>% 
-#   dplyr::group_by(STRAIN) %>%
-#   dplyr::mutate(start = min(start_adj, na.rm = TRUE), 
-#                 end = max(end_adj, na.rm = TRUE)) %>%
-#   dplyr::ungroup() %>%
-#   dplyr::distinct(STRAIN, start, end, y_pos)
-# 
-# # Update the trapeziums
-# trapeziums_adj <- dplyr::inner_join(
-#   plot_ad_aln, plot_ad_aln,
-#   by = "alias",
-#   suffix = c("_upper", "_lower"),
-#   relationship = "many-to-many") %>% 
-#   dplyr::filter(y_pos_upper - y_pos_lower == 1)
-# 
-# # Create trapezium polygons using min/max for x-coordinates so that start/end orientation is corrected.
-# trapezium_polys_adj <- trapeziums_adj %>% 
-#   dplyr::rowwise() %>%
-#   do({
-#     # Calculate corrected x coordinates for the upper rectangle
-#     x_left_upper <- min(.$start_adj_upper, .$end_adj_upper)
-#     x_right_upper <- max(.$start_adj_upper, .$end_adj_upper)
-#     
-#     # Calculate corrected x coordinates for the lower rectangle
-#     x_left_lower <- min(.$start_adj_lower, .$end_adj_lower)
-#     x_right_lower <- max(.$start_adj_lower, .$end_adj_lower)
-#     
-#     data.frame(
-#       alias = .$alias,
-#       group = paste(.$alias, .$y_pos_upper, sep = "_"),
-#       x = c(x_left_upper, x_right_upper, x_right_lower, x_left_lower),
-#       y = c(.$y_pos_upper - 0.2,  # bottom edge of the upper rectangle
-#             .$y_pos_upper - 0.2,
-#             .$y_pos_lower + 0.2,  # top edge of the lower rectangle
-#             .$y_pos_lower + 0.2)
-#     )
-#   }) %>%
-#   dplyr::ungroup()
-# 
-# # Also update any other data frames with alias info, e.g. trapezium_polys:
-# trapezium_polys_adj <- trapezium_polys_adj %>%
-#   dplyr::mutate(alias = factor(alias, levels = ordered_aliases))
-# 
-# # Create the final aligned plot!
-# all_hap_bg_aln <- ggplot() +
-#   geom_segment(data = hlines_adj,
-#                aes(x = start, xend = end, y = y_pos, yend = y_pos)) +
-#   geom_polygon(data = trapezium_polys_adj,
-#                aes(x = x, y = y, group = group, fill = alias)) +
-#   geom_rect(data = plot_ad_aln %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene",as.character(alias))),
-#             aes(xmin = start_adj, xmax = end_adj, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias),color = "black") +
-#   annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
-#   annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
-#   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
-#   annotate("text", x = 14180, y = 49.8, label = "*", size = 12, color = "black") +
-#   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
-#   scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
-#   scale_color_identity()  +
-#   labs(fill="Reference\ngene")+
-#   theme(
-#     panel.background = element_blank(),
-#     axis.title = element_blank(),
-#     axis.text.y = element_text(size = 12, color = 'black'), 
-#     axis.text.x = element_blank(),
-#     axis.title.x = element_blank(),
-#     axis.ticks = element_blank(),
-#     axis.line.x = element_blank(),
-#     # legend.position = 'none',
-#     legend.position = "right",
-#     legend.direction = "horizontal",
-#     legend.key.size = unit(0.4, "lines"),
-#     legend.text = element_text(size = 16),
-#     legend.title = element_text(size = 16)) +
-#   guides(fill = guide_legend(title.position = "top", nrow = 18, byrow = TRUE, override.aes = list(size = 9)))
-# all_hap_bg_aln
 
 
 
@@ -1185,7 +1107,7 @@ all_hap_bg_new
 
 
 label_plot <- ggplot(gene_labels) +
-  geom_text(aes(x = middle, y = 0, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
+  geom_text(aes(x = middle, y = 0, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5, fontface = "italic") +
   scale_x_continuous(expand = c(0.01, 0), limits = range(c(hlines_new$start, hlines_new$end))) +
   scale_y_continuous(expand = c(0, 1), limits = c(0, 1)) +
   theme_void()
@@ -1200,6 +1122,8 @@ final_labeled_plt <- cowplot::plot_grid(
   axis = "lr")
 final_labeled_plt
 
+
+# Save the plot:
 
 
 
@@ -1296,8 +1220,7 @@ final_plt <- cowplot::plot_grid(
   nrow = 2,
   rel_heights = c(0.3, 1)) + theme(plot.background = element_rect(fill = "white", color = NA))
 
-ggsave("/vast/eande106/projects/Lance/THESIS_WORK/misc/TESTER.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
-
+# ggsave("/vast/eande106/projects/Lance/THESIS_WORK/misc/TESTER.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
 
 
 # Which gene has the most ALT-specific SNVs?
@@ -1315,7 +1238,7 @@ snvs_per_gene <- n2_genes_ROI %>%
   dplyr::count(gene_id, seqid, start, end, name = "n_snvs") %>%
   dplyr::arrange(desc(n_snvs)) %>% dplyr::left_join(N2_tran, by = c('seqid','start','end')) %>%
   dplyr::distinct(seqid, start, end, n_snvs, alias)
-
+# WHICH OF THESE 115 VARIANTS HAVE A PREDICTED DELETERIOUS EFFECT???
 
 
 

@@ -5,6 +5,7 @@ library(data.table)
 library(GenomicRanges)
 library(cowplot)
 library(ggrepel)
+library(stringr)
 
 # Load in all SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>% 
@@ -597,11 +598,13 @@ merged_SV <- readr::read_tsv("../../processed_data/structural_variants/Jasmine_m
 N2_gff <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") 
 n2_genes_plt <- N2_gff %>%
   dplyr::filter(type == "gene") %>%
-  dplyr::mutate(attributes = gsub("ID=gene:","",attributes)) %>%
-  dplyr::mutate(attributes = sub(";.*", "", attributes)) %>%
-  dplyr::select(seqid,start,end, attributes) %>%
+  dplyr::mutate(
+    alias = str_extract(attributes, "(?<=Alias=)[^;]+"),
+    sequence_name = str_extract(attributes, "(?<=sequence_name=)[^;]+")) %>%
+  tidyr::separate(alias, into = c("alias","other"), sep = ",") %>%
+  dplyr::select(seqid,start,end, alias, sequence_name) %>%
   dplyr::rename(chrom = seqid) %>% 
-  dplyr::select(chrom, start, end, attributes) %>% 
+  dplyr::select(chrom, start, end, alias, sequence_name) %>% 
   dplyr::filter(chrom != "MtDNA")
 
 MAF_thresh <- round(0.05 * 141)
@@ -644,7 +647,7 @@ check <- ggplot(svs_inCodingRegions %>% dplyr::filter(start > 1600000 & end < 17
     strip.text = element_text(size = 16, color = "black")) 
 check
 
-overlap <- svs_inCodingRegions %>% dplyr::select(chrom, i.start,i.end, attributes, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
+overlap <- svs_inCodingRegions %>% dplyr::select(chrom, i.start,i.end, alias, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
 
 final_stats <- maf_filt %>% 
   dplyr::left_join(overlap, by = c("chrom", "start", "end", "sv_type")) %>% 
@@ -660,7 +663,7 @@ final_stats <- maf_filt %>%
 gene_prop <- svs_inCodingRegions %>% dplyr::mutate(n2_total = 19972) %>%
   dplyr::filter(!is.na(start)) %>%
   dplyr::group_by(sv_type) %>%
-  dplyr::mutate(n_n2_genes = length(unique(attributes)),
+  dplyr::mutate(n_n2_genes = length(unique(alias)),
                 prop = (n_n2_genes / n2_total) * 100) %>%
   dplyr::ungroup() %>%
   dplyr::distinct(sv_type, n2_total, n_n2_genes, prop) %>%
@@ -702,7 +705,7 @@ setkey(n2_genes_dt_2kb, chrom, start, end)
 
 svs_inCodingRegions_2kb <- data.table::foverlaps(x = svs_dt_2kb, y = n2_genes_dt_2kb, type = "any") %>% dplyr::mutate(overlap = ifelse(!is.na(start), TRUE, FALSE))
 
-overlap_2 <- svs_inCodingRegions_2kb %>% dplyr::select(chrom, i.start,i.end, attributes, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
+overlap_2 <- svs_inCodingRegions_2kb %>% dplyr::select(chrom, i.start,i.end, alias, sv_type, overlap) %>% dplyr::rename(start = i.start, end = i.end) %>% dplyr::distinct(chrom,start,end,sv_type, .keep_all = T)
 
 final_stats_2 <- maf_filt %>% 
   dplyr::left_join(overlap_2, by = c("chrom", "start", "end", "sv_type")) %>% 
@@ -718,7 +721,7 @@ final_stats_2 <- maf_filt %>%
 gene_prop_2 <- svs_inCodingRegions_2kb %>% dplyr::mutate(n2_total = 19972) %>%
   dplyr::filter(!is.na(start)) %>%
   dplyr::group_by(sv_type) %>%
-  dplyr::mutate(n_n2_genes = length(unique(attributes)),
+  dplyr::mutate(n_n2_genes = length(unique(alias)),
                 prop = (n_n2_genes / n2_total) * 100) %>%
   dplyr::ungroup() %>%
   dplyr::distinct(sv_type, n2_total, n_n2_genes, prop) %>%
@@ -763,6 +766,46 @@ final_plt
 
 # Save the plot:
 ggsave("../../figures/supplementary/sv_overlap_genes.png", width = 7.5, height = 7.5, dpi = 600)
+
+
+
+#############################################################################
+# What type of N2 genes do SVs most commonly overlap with?
+#############################################################################
+sv_overlap_genes <- svs_inCodingRegions %>% dplyr::filter(!is.na(alias))
+
+n2_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>%
+  dplyr::filter(grepl("N2_", tran)) %>% 
+  dplyr::select(tran, IPR_description)
+
+n2_ipr_clean <- n2_ipr %>% dplyr::mutate(tran = gsub("N2_","", tran)) %>%
+  dplyr::mutate(tran = sub("\\.[^.]*$", "", tran)) %>% # removing trailing isoform numbers
+  dplyr::mutate(tran = sub("[A-Za-z]+$", "", tran)) %>% # removing trailing letters
+  dplyr::filter(IPR_description != "-" & !is.na(IPR_description))
+  
+sv_overlap_ipr <- sv_overlap_genes %>% dplyr::left_join(n2_ipr_clean, by = c('sequence_name' = "tran")) %>% 
+  dplyr::filter(!is.na(IPR_description)) %>%
+  dplyr::distinct(alias, IPR_description) %>%
+  # dplyr::distinct(alias, sv_type, IPR_description) %>%
+  # dplyr::group_by(sv_type, IPR_description) %>%
+  dplyr::group_by(IPR_description) %>%
+  dplyr::mutate(ipr_gene_count = n()) %>%
+  dplyr::ungroup() %>%
+  dplyr::distinct(IPR_description, ipr_gene_count) %>%
+  # dplyr::group_by(sv_type) %>%
+  dplyr::mutate(total_genes = sum(ipr_gene_count)) %>%
+  dplyr::mutate(prop_ipr_gene_count = (ipr_gene_count / total_genes) * 100) #%>%
+  # dplyr::ungroup()
+
+
+
+# Filter for unique IPR terms per gene, count # of terms for each SV, facet by SV type
+
+
+
+
+
+
 
 
 
