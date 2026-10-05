@@ -709,13 +709,13 @@ all_hap <- ggplot() +
 all_hap
 
 # Exclude "non-ortho" from the trapezium joining
-# plot_ad_filtered <- plot_ad %>% 
-  # dplyr::mutate(alias=ifelse(is.na(alias),"non-ortho",alias)) %>%
-  # filter(alias != "non-ortho")
+plot_ad_filtered <- plot_ad %>%
+  dplyr::mutate(alias=ifelse(is.na(alias),"non-ortho",alias)) %>%
+  filter(alias != "non-ortho")
 
 # Join filtered data frames for many-to-many connections
 trapeziums <- dplyr::inner_join(
-  plot_ad, plot_ad,
+  plot_ad_filtered, plot_ad_filtered,
   by = "alias",
   suffix = c("_upper", "_lower"),
   relationship = "many-to-many") %>% 
@@ -776,7 +776,7 @@ default_colors <- setNames(hcl.colors(length(shuffled_aliases), "Dark 3"), shuff
 final_colors <- default_colors[ordered_aliases]
 
 # Optionally, if you have the "non-ortho" alias (or any other), add it explicitly:
-final_colors <- c(final_colors, "Unknown gene" = "darkgrey")
+final_colors <- c(final_colors, "non-N2 gene" = "darkgrey")
 
 # plot_ad_segments <- plot_ad %>%
 #   dplyr::mutate(
@@ -798,7 +798,7 @@ all_hap_bg <- ggplot() +
                aes(x = boundStart - shift, xend = boundEnd - shift, y = y_pos, yend = y_pos)) +
   geom_polygon(data = trapezium_polys,
                aes(x = x, y = y, group = group, fill = alias)) +
-  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"Unknown gene", as.character(alias))),
+  geom_rect(data = plot_ad %>% dplyr::mutate(alias=ifelse(is.na(alias),"non-N2 gene", as.character(alias))),
             aes(xmin = start, xmax = end, ymin = y_pos + 0.2, ymax = y_pos - 0.2, fill = alias), color = "black") +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +

@@ -10,11 +10,11 @@ library(ggnewscale)
 # ============================================================
 # USER SETTINGS + DATA
 # ============================================================
-mapping_file <- "../../processed_data/gwas/mapping_2018GWAS_MLs.tsv"
-genotype_matrix_file <- "../../processed_data/gwas/genotype_matrix.tsv"
+mapping_file <- "../../tables/mapping_2018GWAS_MLs.tsv"
+genotype_matrix_file <- "../../tables/gwas/genotype_matrix.tsv"
 mapping_id_col <- "strain"
 independent_tests <- 9462.00000000002
-LOCO_gwa_file <- "../../processed_data/gwas/abamectin_q90.TOF_ctrl-regressed_loco.gwa"
+LOCO_gwa_file <- "../../tables/abamectin_q90.TOF_ctrl-regressed_loco.gwa"
 
 # ============================================================
 # HELPERS
