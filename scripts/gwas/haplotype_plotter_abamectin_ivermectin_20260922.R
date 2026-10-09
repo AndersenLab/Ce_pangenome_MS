@@ -13,10 +13,10 @@ library(Biostrings)
 # ========================================================================================================================================================================================================= #
 # Load in abamectin and ivermectin trait data
 # ========================================================================================================================================================================================================= #
-traits <- readr::read_tsv("../../processed_data/gwas/mapping_2018GWAS_MLs.tsv") %>%
+traits <- readr::read_tsv("../../tables/mapping_2018GWAS_MLs.tsv") %>%
   dplyr::select(strain, `Abamectin_q90.TOF_ctrl-regressed`, `Ivermectin_median.TOF_ctrl-regressed`)
 
-geno_matrix <- readr::read_tsv("../../processed_data/gwas/genotype_matrix.tsv")
+geno_matrix <- readr::read_tsv("../../tables/genotype_matrix.tsv")
 
 wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::pull()
 
@@ -26,7 +26,7 @@ wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv")
 # ========================================================================================================================================================================================================= #
 hdr_chrom = "V"
 hdr_start_pos = 16198034 - 22000
-hdr_end_pos = 16198034 + 42000
+hdr_end_pos = 16198034 + 22000
 # hdr_start_pos = 15658959 # qtl start
 # hdr_end_pos = 18046079 # qtl end
 
@@ -744,8 +744,8 @@ trapezium_polys <- trapeziums %>%
             .$y_pos_lower + 0.2)
     )
   }) %>%
-  dplyr::ungroup() %>%
-  dplyr::mutate(geno = ifelse(strain_lower %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) #%>%
+  dplyr::ungroup()# %>%
+  # dplyr::mutate(geno = ifelse(strain_lower %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
   # dplyr::mutate(geno = factor(geno, levels = c("REF","ALT")))
 
 # Extract unique aliases at y_pos 77 in order of increasing start position
@@ -1087,27 +1087,35 @@ all_hap_bg_new <- ggplot() +
         element_rect(fill = "black", color = "black"),
         element_rect(fill = "red", color = "black")),
       text_y = list(
-        element_text(angle = 90, size = 14, color = "white", face = "bold"),
-        element_text(angle = 90, size = 14, color = "white", face = "bold")))) +
+        element_text(angle = 90, size = 10, color = "white", face = "bold"),
+        element_text(angle = 90, size = 10, color = "white", face = "bold")))) +
   # geom_text(data = gene_labels, aes(x = middle, y = 52, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
   theme(
     panel.background = element_blank(),
     axis.title = element_blank(),
-    axis.text.y = element_text(size = 12, color = 'black'), 
+    axis.text.y = element_text(size = 8, color = 'black'), 
     axis.text.x = element_blank(),
     axis.title.x = element_blank(),
     axis.ticks = element_blank(),
     axis.line.x = element_blank(),
+    plot.margin = margin(l = 5,0,0,0),
+    legend.position = "bottom",
+    legend.direction = "horizontal",
+    legend.margin = margin(0, 0, 0, 0),
+    legend.box.margin = margin(0, 0, 0, 0),
+    legend.box.spacing = unit(0, "pt"),
+    legend.title = element_text(size = 8, color = 'black'),
+    legend.text = element_text(size = 8, color = 'black'),
     # legend.position = 'none',
     # strip.placement = "outside",           
     strip.background = element_rect(fill = "grey85", color = "black"), 
-    strip.text.y.left = element_text(angle = 90, size = 11)) +
-  guides(fill = guide_colorbar(title.position = "top", byrow = TRUE, override.aes = list(size = 9)))
+    strip.text.y.left = element_text(angle = 90, size = 8)) +
+  guides(fill = guide_colorbar(title.position = "left", title.theme = element_text(margin = margin(r = 10)), byrow = TRUE, override.aes = list(size = 9)))
 all_hap_bg_new
 
 
 label_plot <- ggplot(gene_labels) +
-  geom_text(aes(x = middle, y = 0, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5, fontface = "italic") +
+  geom_text(aes(x = middle, y = 0, label = alias), angle = 50, size = 2.5, hjust = 0.4, vjust = 0, fontface = "italic") +
   scale_x_continuous(expand = c(0.01, 0), limits = range(c(hlines_new$start, hlines_new$end))) +
   scale_y_continuous(expand = c(0, 1), limits = c(0, 1)) +
   theme_void()
@@ -1117,14 +1125,14 @@ final_labeled_plt <- cowplot::plot_grid(
   label_plot,
   all_hap_bg_new,
   ncol = 1,
-  rel_heights = c(0.03, 0.85),
+  rel_heights = c(0.05, 0.85),
   align = "v",
-  axis = "lr")
+  axis = "lr")  + theme(plot.background = element_rect(fill = "white", color = NA))
 final_labeled_plt
 
 
 # Save the plot:
-
+ggsave("../../figures/abamectin_haplotype.png", width = 7.5, height = 7.5, dpi = 600)
 
 
 
