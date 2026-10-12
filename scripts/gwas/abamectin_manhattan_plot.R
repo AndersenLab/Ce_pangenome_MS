@@ -6,6 +6,7 @@ library(ggrepel)
 library(glue)
 library(circlize)
 library(ggnewscale)
+library(cowplot)
 
 # ============================================================
 # USER SETTINGS + DATA
@@ -15,6 +16,9 @@ genotype_matrix_file <- "../../tables/gwas/genotype_matrix.tsv"
 mapping_id_col <- "strain"
 independent_tests <- 9462.00000000002
 LOCO_gwa_file <- "../../tables/abamectin_q90.TOF_ctrl-regressed_loco.gwa"
+hdrs <- readr::read_tsv("../../data/genomic_resources/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain"))
+glc1 <- data.frame(CHR = "V", xmin = (16219634 / 1e6) - 0.02, xmax = (16221917 / 1e6) + 0.02)
+strains_phenotyped <- readr::read_tsv("../../tables/mapping_2018GWAS_MLs.tsv") %>% dplyr::pull(strain)
 
 # ============================================================
 # HELPERS
@@ -159,6 +163,75 @@ find_annotated_gwa <- function(finemap_folder) {
 
 roman_chr_levels <- c("I", "II", "III", "IV", "V", "X", "MtDNA")
 
+
+# ============================================================
+# Collapse HDRs
+# ============================================================
+all_regions <- hdrs %>%
+  dplyr::filter(strain %in% strains_phenotyped) %>%
+  dplyr::rename(START = start, CHROM = chrom, END = end) %>%
+  dplyr::arrange(CHROM,START) %>%
+  dplyr::group_split(CHROM)
+
+# Collapsing all HDRs
+getRegFreq <- function(all_regions) {
+  all_collapsed <- list()
+  for (i in 1:length(all_regions)) {
+    temp <- all_regions[[i]]
+    k=1
+    j=1
+    while (k==1) {
+      checkIntersect <- temp %>%
+        dplyr::arrange(CHROM,START) %>%
+        dplyr::mutate(check=ifelse(lead(START) <= END,T,F)) %>%
+        dplyr::mutate(check=ifelse(is.na(check),F,check))
+      
+      print(nrow(checkIntersect %>% dplyr::filter(check==T)))
+      
+      if(nrow(checkIntersect %>% dplyr::filter(check==T)) == 0) {
+        print("NO MORE INTERSECTS")
+        k=0
+      } else {
+        
+        temp <- checkIntersect %>%
+          dplyr::mutate(gid=data.table::rleid(check)) %>%
+          dplyr::mutate(gid=ifelse((check==F| is.na(check)) & lag(check)==T,lag(gid),gid))
+        
+        collapse <- temp %>%
+          dplyr::filter(check==T | (check==F & lag(check)==T)) %>%
+          dplyr::group_by(gid) %>%
+          dplyr::mutate(newStart=min(START)) %>%
+          dplyr::mutate(newEnd=max(END)) %>%
+          dplyr::ungroup() %>%
+          dplyr::distinct(gid,.keep_all = T)  %>%
+          dplyr::mutate(START=newStart,END=newEnd) %>%
+          dplyr::select(-newEnd,-newStart)
+        
+        retain <- temp %>%
+          dplyr::filter(check == FALSE & dplyr::coalesce(dplyr::lag(check), FALSE) == FALSE)
+        # dplyr::filter(check==F & lag(check)==F)
+        
+        temp <- rbind(collapse,retain) %>%
+          dplyr::select(-gid,-check)
+        
+        j=j+1
+      }
+    }
+    print("WRITING TO LIST")
+    print(head(temp))
+    all_collapsed[[i]] <- temp
+  }
+  return(all_collapsed)
+}
+
+HDR_collapse_master <- getRegFreq(all_regions)
+
+all_collapsed <- plyr::ldply(HDR_collapse_master, data.frame) %>%
+  dplyr::select(-strain)
+
+colnames(all_collapsed) <- c("CHR","start","end")
+
+
 # ============================================================
 # MANHATTAN
 # ============================================================
@@ -194,14 +267,17 @@ plot_manhattan <- function(gwa, bf_threshold) {
     dplyr::distinct(CHR) %>%
     dplyr::mutate(bf = bf_threshold)
 
-  ggplot(df, aes(x = POS / 1e6, y = neglogp, colour = sig, alpha = sig)) +
-    geom_point(size = 0.6) +
+  ggplot(df) +
+    geom_rect(data = all_collapsed, aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 8), fill = 'black', alpha = 0.2) +
+    geom_rect(data = glc1, aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = 8), fill = 'purple') +
+    geom_point(aes(x = POS / 1e6, y = neglogp, colour = sig, alpha = sig), size = 0.6) +
     scale_colour_manual(values = sig.colors) +
     scale_alpha_manual(values = sig.alpha) +
     geom_hline(data = line_df, aes(yintercept = bf), linetype = 1) +
     facet_grid(. ~ CHR, scales = "free_x", space = "free_x", drop = FALSE) +
     labs(x = "N2 genomic position (Mb)", y = expression(-log[10](italic(p)))) +
-    scale_y_continuous(expand = expansion(mult = c(0,0.01))) +
+    scale_y_continuous(expand = c(0,0)) +
+    # scale_x_continuous(expand = c(0,0)) +
     theme_bw(base_size = 10) +
     theme(
       panel.grid = element_blank(),

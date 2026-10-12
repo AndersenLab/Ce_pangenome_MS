@@ -22,11 +22,11 @@ wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv")
 
 
 # ========================================================================================================================================================================================================= #
-# First trait to look at is q90 TOF for abamectin (peak marker of V:16198034 log10 7.66)
+# q90 TOF for abamectin (peak marker of V:16198034 log10 7.66)
 # ========================================================================================================================================================================================================= #
 hdr_chrom = "V"
 hdr_start_pos = 16198034 - 22000
-hdr_end_pos = 16198034 + 22000
+hdr_end_pos = 16198034 + 22000 # 2200 for Figure 6, 4200 for Supplementary Figure 30
 # hdr_start_pos = 15658959 # qtl start
 # hdr_end_pos = 18046079 # qtl end
 
@@ -803,7 +803,6 @@ all_hap_bg <- ggplot() +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 0.7, ymax = 16.3, fill = 'red') +
   annotate("rect", xmin = -1000, xmax = -100, ymin = 16.7, ymax = 50.3, fill = 'black') +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
-  # annotate("text", x = 14180, y = 49.8, label = "*", size = 5, color = "black") +
   scale_x_continuous(expand = c(0.01, 0), labels = function(x) x / 1000) +
   scale_fill_manual(values = final_colors, breaks = names(final_colors)) +
   scale_color_identity()  +
@@ -967,14 +966,14 @@ alt_orthos <- orthos %>% dplyr::select(Orthogroup, all_of(alt_strains)) %>%
 ################ ADD PSEUDOGENES FOR WILD STRAINS (CHECK TO SEE IF THEY ARE EXPRESSED) AND ADD OVERLAPPING N2 GENES AS DIFFERENT COLUMNS - EXPRESSION EVIDENCE IN WILD STRAINS???
 # Make all genes the same size and in the exact same position for orthologs across all strains
 updated_gene_sizes <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::select(alias, start, end) %>% 
-  dplyr::filter(!is.na(alias)) %>% # ADD BACK SRZ-13 AND SRZ-14 - they both have distal orthologs in only some strains...
+  dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # ADD BACK SRZ-13 AND SRZ-14 - they both have distal orthologs in only some strains...
   dplyr::arrange(start) %>%
   dplyr::mutate(
     new_start = cumsum(c(0, rep(1000, n() - 1))),
     new_end = new_start + 500) # making genes evenly spaces
 
 plot_ad_new <- plot_ad %>% 
-  dplyr::filter(!is.na(alias)) %>% # For visualization purposes
+  dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
   dplyr::left_join(updated_gene_sizes, by = "alias") %>%
   dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
   dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) %>%
@@ -1069,6 +1068,8 @@ og_idy_long <- msa_idy %>% tidyr::pivot_longer(-orthogroup, names_to = "strain",
 
 plot_ad_new_idy <- plot_ad_new %>% dplyr::left_join(og_idy_long, by = c("STRAIN", "alias")) %>% dplyr::mutate(identity = as.numeric(as.character(identity)))
 
+# peak_marker <- data.frame(geno = "REF", x = 5930.4, y = 50) %>%
+  # dplyr::mutate(geno = factor(geno, levels = c("REF", "ALT")))
 
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
@@ -1078,8 +1079,9 @@ all_hap_bg_new <- ggplot() +
             aes(xmin = new_start, xmax = new_end, ymin = y_pos + 0.4, ymax = y_pos - 0.4, fill = identity),color = "black") +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
-  scale_fill_gradientn(colors = c("yellow", "blue")) +
-  # scale_color_identity()  +
+  # geom_text(data = peak_marker, aes(x = x, y = y), label = "*", size = 5, color = "black") +
+  geom_vline(xintercept = 5930.4, linetype = "dashed", color= 'black') +
+  scale_fill_gradientn(colors = c("yellow", "orange", "red", "blue")) +
   labs(fill="Percent\nidentity (%)") +
   ggh4x::facet_grid2(geno ~ ., scales = "free_y", space = "free_y", switch = "y",
     strip = ggh4x::strip_themed(
@@ -1089,7 +1091,6 @@ all_hap_bg_new <- ggplot() +
       text_y = list(
         element_text(angle = 90, size = 10, color = "white", face = "bold"),
         element_text(angle = 90, size = 10, color = "white", face = "bold")))) +
-  # geom_text(data = gene_labels, aes(x = middle, y = 52, label = alias), angle = 0, size = 6, hjust = 0.5, vjust = 0.5) +
   theme(
     panel.background = element_blank(),
     axis.title = element_blank(),
@@ -1106,8 +1107,6 @@ all_hap_bg_new <- ggplot() +
     legend.box.spacing = unit(0, "pt"),
     legend.title = element_text(size = 8, color = 'black'),
     legend.text = element_text(size = 8, color = 'black'),
-    # legend.position = 'none',
-    # strip.placement = "outside",           
     strip.background = element_rect(fill = "grey85", color = "black"), 
     strip.text.y.left = element_text(angle = 90, size = 8)) +
   guides(fill = guide_colorbar(title.position = "left", title.theme = element_text(margin = margin(r = 10)), byrow = TRUE, override.aes = list(size = 9)))
@@ -1148,7 +1147,6 @@ interval_snvs <- readr::read_tsv("../../processed_data/gwas/SNVs_in_Interval.tsv
   dplyr::select(-CHROM,-REF,-ALT, -N2) 
 
 interval_snv_nonMissing <- interval_snvs %>% dplyr::filter(dplyr::if_all(4:last_col(), ~ !is.na(.x))) %>%
-  dplyr::select(-CHROM,-REF,-ALT, -N2) %>%
   dplyr::mutate(alt_specific = dplyr::if_all(
       dplyr::all_of(alt_strains[alt_strains != "N2"]), ~ .x == 1) &
       dplyr::if_all(dplyr::all_of(setdiff(want, alt_strains)), ~ .x == 0))
@@ -1228,7 +1226,8 @@ final_plt <- cowplot::plot_grid(
   nrow = 2,
   rel_heights = c(0.3, 1)) + theme(plot.background = element_rect(fill = "white", color = NA))
 
-# ggsave("/vast/eande106/projects/Lance/THESIS_WORK/misc/TESTER.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
+# Save the plot!
+ggsave("../../figures/supplementary/snvs_QTL.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
 
 
 # Which gene has the most ALT-specific SNVs?
