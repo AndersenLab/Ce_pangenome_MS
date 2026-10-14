@@ -26,7 +26,7 @@ wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv")
 # ========================================================================================================================================================================================================= #
 hdr_chrom = "V"
 hdr_start_pos = 16198034 - 22000
-hdr_end_pos = 16198034 + 22000 # 2200 for Figure 6, 4200 for Supplementary Figure 30
+hdr_end_pos = 16198034 + 22000 # 22000 for Figure 6, 42000 for Supplementary Figure 30
 # hdr_start_pos = 15658959 # qtl start
 # hdr_end_pos = 18046079 # qtl end
 
@@ -835,6 +835,8 @@ all_hap_bg
 
 # Save plot:
 ggsave("../../figures/supplementary/abamectin_REF_ALT_haplotypes.png", all_hap_bg, width = 7.5, height = 7, dpi = 600)
+write.table(plot_ad %>% dplyr::filter(alias == "glc-1") %>% dplyr::select(strain = STRAIN, gene = Parent, alias), "../../processed_data/gwas/glc1_orthos.tsv", quote = F, col.names = T,
+            row.names = F, sep = "\t")
 
 
 # Ensure that none of the 5 missing N2 genes are in any of the ALT strains
@@ -996,6 +998,10 @@ gene_labels <- plot_ad_new %>% dplyr::mutate(middle = (new_start + new_end) / 2)
 n2_genes_interval <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::distinct(tranname) %>% dplyr::filter(tranname != "transcript_K05D4.6b.1" & tranname != "transcript_F11A5.5a.1") %>% 
   dplyr::pull() %>% c("transcript_K05D4.6a.1") %>% c("transcript_F11A5.5b.1")
 
+n2_gene_list_interval <- as.data.frame(n2_genes_interval)
+
+write.table(n2_gene_list_interval, "../../processed_data/gwas/n2_genes_inInterval.txt", quote = F, row.names = F, col.names = F, sep = '\t')
+
 orthos_interval <- orthos %>% dplyr::select(Orthogroup, all_of(want)) %>%
   tidyr::separate_rows(N2, sep = ", ") %>%
   dplyr::filter(N2 %in% n2_genes_interval) %>%
@@ -1132,132 +1138,6 @@ final_labeled_plt
 
 # Save the plot:
 ggsave("../../figures/abamectin_haplotype.png", width = 7.5, height = 7.5, dpi = 600)
-
-
-
-
-
-# Tile plot of SNVs
-interval_snvs <- readr::read_tsv("../../processed_data/gwas/SNVs_in_Interval.tsv") %>%
-  dplyr::mutate(dplyr::across(4:last_col(), ~ dplyr::case_when(
-    .x == "0/0" ~ "0",
-    .x == "1/1" ~ "1",
-    .x == "./." ~ NA_character_,
-    TRUE ~ .x))) %>%
-  dplyr::select(-CHROM,-REF,-ALT, -N2) 
-
-interval_snv_nonMissing <- interval_snvs %>% dplyr::filter(dplyr::if_all(4:last_col(), ~ !is.na(.x))) %>%
-  dplyr::mutate(alt_specific = dplyr::if_all(
-      dplyr::all_of(alt_strains[alt_strains != "N2"]), ~ .x == 1) &
-      dplyr::if_all(dplyr::all_of(setdiff(want, alt_strains)), ~ .x == 0))
-
-alt_specific <- interval_snv_nonMissing %>% dplyr::select(POS, alt_specific) %>% dplyr::filter(alt_specific == "TRUE") %>%
-  dplyr::mutate(seqid = "V")
-
-pos <- interval_snv_nonMissing$POS
-
-snv_nonMissing_long <- interval_snv_nonMissing %>%
-  dplyr::select(-POS, -alt_specific) %>%
-  t() %>%
-  as.data.frame() %>%
-  setNames(pos) %>%
-  tibble::rownames_to_column("strain") %>%
-  tidyr::pivot_longer(
-    cols = -strain,
-    names_to = "POS",
-    values_to = "genotype") %>%
-  dplyr::mutate(POS = as.numeric(POS)) %>%
-  dplyr::mutate(strain = factor(strain, levels = rev(want[want != "N2"]))) %>%
-  dplyr::mutate(genotype = ifelse(genotype == "0", "REF", "ALT"))
-
-n2_genes_ROI <- gffCat2 %>% dplyr::filter(seqid == "V", start >= (16198034 - 22000) & end <=(16198034 + 32000), type == "gene") 
-
-genes_interval <- ggplot(n2_genes_ROI) +
-  geom_hline(yintercept = 1) +
-  geom_rect(aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0.9, ymax = 1.1)) +
-  geom_vline(xintercept = 16198034 / 1e6, color = 'red', linetype = 'solid') +
-  geom_rect(data = alt_specific, aes(xmin = (POS - 10) / 1e6, xmax = (POS + 10) / 1e6, ymin = 0.8, ymax = 1.2), fill = "magenta3") +
-  scale_y_continuous(expand = c(0,0)) +
-  theme(panel.background = element_blank(),
-        panel.border = element_blank(),
-        axis.text = element_blank(),
-        axis.ticks = element_blank())
-genes_interval 
-
-# Adding gene labels
-n2_gene_name_pos <- N2_tran %>% dplyr::left_join(n2_genes_ROI, by = c("seqid","start","end")) %>% dplyr::filter(!is.na(STRAIN.y)) %>%
-  dplyr::filter(tranname %in% n2_genes_interval) %>%
-  dplyr::mutate(middle = (start + end) / 2) %>%
-  dplyr::select(alias, middle)
-
-label_plot_2 <- ggplot(n2_gene_name_pos) +
-  geom_text(aes(x = middle, y = 0, label = alias), angle = 75, size = 2, hjust = 0.5, vjust = 0.5) +
-  scale_x_continuous(expand = c(0.08,0.08)) +
-  scale_y_continuous(expand = c(0,0)) +
-  theme_void() +
-  theme(plot.margin = margin(l = 5, r = 5, t = 5, b = -27))
-# label_plot_2
-
-snvs_interval_plt <- ggplot(snv_nonMissing_long %>% dplyr::filter(POS >= min(n2_genes_ROI$start) & POS <= max(n2_genes_ROI$end)), 
-                            aes(x = POS / 1e6, y = strain, fill = genotype)) +
-  geom_tile() +
-  scale_fill_manual(values = c("REF" = "white", "ALT" = "red")) +
-  scale_x_continuous(labels = scales::comma) +
-  theme_minimal() +
-  theme(
-    axis.title.y = element_blank(),
-    axis.title.x = element_text(size = 11, color = 'black'),
-    axis.text.x = element_text(size = 10, color = 'black'),
-    axis.text.y = element_text(size = 9, color = 'black'),
-    panel.border = element_rect(color = "black", fill = NA),
-    panel.grid = element_blank()) +
-  labs(x = "N2 genomic position (Mb)", fill = "Genotype")
-# snvs_interval_plt
-
-# Creating the final, labeled plot
-top <- cowplot::plot_grid(
-  label_plot_2, genes_interval,
-  align = "v",
-  nrow = 2)
-
-final_plt <- cowplot::plot_grid(
-  top, snvs_interval_plt,
-  align = "v",
-  nrow = 2,
-  rel_heights = c(0.3, 1)) + theme(plot.background = element_rect(fill = "white", color = NA))
-
-# Save the plot!
-ggsave("../../figures/supplementary/snvs_QTL.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
-
-
-# Which gene has the most ALT-specific SNVs?
-snvs_per_gene <- n2_genes_ROI %>%
-  dplyr::mutate(gene_id = dplyr::row_number()) %>%
-  dplyr::inner_join(
-    alt_specific,
-    by = "seqid",
-    relationship = "many-to-many"
-  ) %>%
-  dplyr::filter(
-    POS >= start,
-    POS <= end
-  ) %>%
-  dplyr::count(gene_id, seqid, start, end, name = "n_snvs") %>%
-  dplyr::arrange(desc(n_snvs)) %>% dplyr::left_join(N2_tran, by = c('seqid','start','end')) %>%
-  dplyr::distinct(seqid, start, end, n_snvs, alias)
-# WHICH OF THESE 115 VARIANTS HAVE A PREDICTED DELETERIOUS EFFECT???
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 
