@@ -10,6 +10,8 @@ traits <- readr::read_tsv("../../tables/mapping_2018GWAS_MLs.tsv") %>%
 
 geno_matrix <- readr::read_tsv("../../tables/genotype_matrix.tsv")
 
+wild_strains_140 <- readr::read_tsv("../../tables/wild_strain_genome_stats.tsv") %>% dplyr::select(Strain) %>% dplyr::pull()
+
 # ========================================================================================================================================================================================================= #
 # Visualizing abamectin haplotype for ALL strains we have assemblies for 
 # ========================================================================================================================================================================================================= #
@@ -40,8 +42,6 @@ n2_genes_interval <- readr::read_tsv("../../processed_data/gwas/n2_genes_inInter
 n2_gff <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3") %>% dplyr::mutate(STRAIN="N2")
 
 
-N2Start = min(HV_boundary$refStart)
-N2End = max(HV_boundary$refEnd)
 N2_genes <- n2_gff %>%
   dplyr::filter(type=="gene") %>%
   # dplyr::mutate(refStart=N2Start,refEnd=N2End) %>%
@@ -171,13 +171,44 @@ snvs_per_gene <- n2_genes_ROI %>%
   dplyr::inner_join(
     alt_specific,
     by = "seqid",
-    relationship = "many-to-many"
-  ) %>%
-  dplyr::filter(
-    POS >= start,
-    POS <= end
-  ) %>%
+    relationship = "many-to-many") %>%
+  dplyr::filter(POS >= start & POS <= end)  %>%
   dplyr::count(gene_id, seqid, start, end, name = "n_snvs") %>%
   dplyr::arrange(desc(n_snvs)) %>% dplyr::left_join(N2_tran, by = c('seqid','start','end')) %>%
   dplyr::distinct(seqid, start, end, n_snvs, alias)
-# WHICH OF THESE 115 VARIANTS HAVE A PREDICTED DELETERIOUS EFFECT???
+# WHICH OF THESE 68 VARIANTS HAVE A PREDICTED DELETERIOUS EFFECT???
+
+
+glc_1_variants <- readr::read_csv("../../processed_data/gwas/CSQ_glc-1.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% alt_strains) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  dplyr::filter(alt_specific == TRUE) %>%
+  dplyr::filter(blosum <= 0)
+
+
+f11_18_variants <- readr::read_tsv("../../processed_data/gwas/CSQ_F11A5.18.csv")
+
+
+f11_5_variants <- readr::read_tsv("../../processed_data/gwas/CSQ_F11A5.5.csv")
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
