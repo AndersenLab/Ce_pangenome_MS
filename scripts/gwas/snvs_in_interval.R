@@ -162,7 +162,7 @@ final_plt <- cowplot::plot_grid(
 final_plt
 
 # Save the plot!
-ggsave("../../figures/supplementary/snvs_QTL.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
+# ggsave("../../figures/supplementary/snvs_QTL.png", final_plt, width = 7.5, height = 7.5, dpi = 600)
 
 
 # Which gene has the most ALT-specific SNVs?
@@ -191,10 +191,57 @@ glc_1_variants <- readr::read_csv("../../processed_data/gwas/CSQ_glc-1.csv") %>%
   dplyr::filter(blosum <= 0)
 
 
-f11_18_variants <- readr::read_tsv("../../processed_data/gwas/CSQ_F11A5.18.csv")
+f11_18_variants <- readr::read_csv("../../processed_data/gwas/CSQ_F11A5.18.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% c("ECA36","ECA369")) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") #%>%
+  # dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  # dplyr::filter(alt_specific == TRUE) %>%
+  # dplyr::filter(blosum <= 0)
 
 
-f11_5_variants <- readr::read_tsv("../../processed_data/gwas/CSQ_F11A5.5.csv")
+f11_5_variants <- readr::read_csv("../../processed_data/gwas/CSQ_F11A5.5.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id, -dna_change) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% alt_strains) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence, amino_acid_change) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>%
+  dplyr::filter(alt_specific == TRUE) 
+  # dplyr::filter(blosum <= 0)
+
+
+irld26_variants <- readr::read_csv("../../processed_data/gwas/CSQ_irld26.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% c("ECA36","ECA369")) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") #%>%
+  # dplyr::filter(grepl("missense",consequence))
+  # dplyr::distinct(across(-amino_acid_change))
+  # dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  # dplyr::filter(alt_specific == TRUE) %>%
+  # dplyr::filter(blosum <= 0)
+
+
+
+oac15_variants <- readr::read_csv("../../processed_data/gwas/CSQ_oac15.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% c("ECA36","ECA369")) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") #%>%
+  # dplyr::filter(grepl("missense",consequence))
+  # dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  # dplyr::filter(alt_specific == TRUE) %>%
+  # dplyr::filter(blosum <= 0)
+
 
 
 

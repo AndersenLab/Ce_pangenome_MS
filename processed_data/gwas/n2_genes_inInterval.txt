@@ -1,0 +1,17 @@
+transcript_K05D4.2.1
+transcript_K05D4.8.1
+transcript_K05D4.3.1
+transcript_F11A5.1.1
+transcript_F11A5.2.1
+transcript_F11A5.3.1
+transcript_F11A5.4.1
+transcript_F11A5.17.1
+transcript_F11A5.18.1
+transcript_F11A5.7.1
+transcript_F11A5.8.1
+transcript_F11A5.16.1
+transcript_F11A5.9.1
+transcript_F11A5.15.1
+transcript_F11A5.10.1
+transcript_K05D4.6a.1
+transcript_F11A5.5b.1
