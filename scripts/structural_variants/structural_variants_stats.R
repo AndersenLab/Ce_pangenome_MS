@@ -6,6 +6,8 @@ library(GenomicRanges)
 library(cowplot)
 library(ggrepel)
 library(stringr)
+library(rstatix)
+library(ggpubr)
 
 # Load in all SV calls
 allcalls <- readr::read_tsv("../../processed_data/structural_variants/141_over50_PASS_variants.tsv", col_names = c("chrom", "pos", "ref", "alt", "filter", "sv_type","sv_length","strain")) %>% dplyr::select(-filter) %>% 
@@ -202,7 +204,7 @@ ggsave("../../figures/supplementary/largest_PAV_INV.png", largest_PAV_INV, width
 # Are SVs enriched in HDRs??
 #############################################################################
 strains <- allcalls %>% dplyr::select(strain) %>% dplyr::distinct() %>% dplyr::pull()
-hdrs <- readr::read_tsv("../../data/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain")) %>% 
+hdrs <- readr::read_tsv("../../data/genomic_resources/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain")) %>% 
   dplyr::filter(strain %in% strains)
 
 # COLLAPSING HDRS AMONG 140 WSs
@@ -279,7 +281,7 @@ bin_size <- 1000L
 
 chr_order <- c("I","II","III","IV","V","X")
 
-chrom_sizes <- readr::read_tsv("../../data/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
+chrom_sizes <- readr::read_tsv("../../data/genomic_resources/N2.WS283.cleaned.fa.fai", col_names = c("chrom","start","end")) %>%
   dplyr::mutate(chrom = factor(chrom, levels = chr_order)) %>%
   dplyr::mutate(chrom = as.character(chrom))
 
@@ -601,10 +603,10 @@ n2_genes_plt <- N2_gff %>%
   dplyr::mutate(
     alias = str_extract(attributes, "(?<=Alias=)[^;]+"),
     sequence_name = str_extract(attributes, "(?<=sequence_name=)[^;]+")) %>%
+  tidyr::separate(attributes, into = c("wbgene","other"), sep = ";") %>%
+  dplyr::mutate(wbgene = gsub("ID=gene:","", wbgene)) %>%
   tidyr::separate(alias, into = c("alias","other"), sep = ",") %>%
-  dplyr::select(seqid,start,end, alias, sequence_name) %>%
-  dplyr::rename(chrom = seqid) %>% 
-  dplyr::select(chrom, start, end, alias, sequence_name) %>% 
+  dplyr::select(chrom = seqid,start,end, wbgene, alias, sequence_name) %>%
   dplyr::filter(chrom != "MtDNA")
 
 MAF_thresh <- round(0.05 * 141)
@@ -799,20 +801,56 @@ sv_overlap_ipr <- sv_overlap_genes %>% dplyr::left_join(n2_ipr_clean, by = c('se
 
 
 
-# Filter for unique IPR terms per gene, count # of terms for each SV, facet by SV type
 
+#############################################################################
+# What are the expression level difference for genes that have SVs in wild strains, and those that do not?
+#############################################################################
+n2_rna <- readr::read_tsv("../../processed_data/gwas/rna_aln/coverage/ALL_strains_cov.txt", col_names = c("chrom","start","end","gene","sum_cov","mean_cov", "strain")) %>%
+  dplyr::filter(strain == "N2") 
 
+n2_rna_svs <- n2_genes_plt %>%
+  dplyr::left_join(n2_rna, by = c("wbgene" = "gene")) %>%
+  dplyr::select(chrom = chrom.x, start = start.x, end = end.x, wbgene, alias, sequence_name, sum_cov, mean_cov) %>%
+  dplyr::left_join(svs_inCodingRegions, by = c("chrom","start","end","alias", "sequence_name")) %>%
+  dplyr::select(-i.start, -i.end, -overlap) %>%
+  dplyr::mutate(gene_len = end - start) %>%
+  dplyr::mutate(sv_type = ifelse(is.na(sv_type), "NONE", sv_type)) %>%
+  dplyr::filter(mean_cov != 0) %>% # 2,009 N2 genes do not have any RNA coverage
+  dplyr::mutate(log_cov = log10(mean_cov), 
+                sv_type = factor(sv_type, levels = c("NONE", "DEL", "INS", "INV"))) %>%
+  dplyr::distinct()
 
+cov_sv_plt <- ggplot(n2_rna_svs) +
+  geom_boxplot(aes(x = sv_type, y = log_cov, fill = sv_type), alpha = 0.5, outliers = FALSE) +
+  geom_jitter(aes(x = sv_type, y = log_cov), width = 0.15, alpha = 0.25, size = 0.5) +
+  scale_fill_manual(values = c("NONE" = "black", "DEL" = "red", "INS" = "blue", "INV" = "gold")) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_rect(color = 'black', fill = NA),
+    axis.text.x = element_text(size = 14, color = "black"),
+    axis.text.y = element_text(size = 10, color = 'black'),
+    axis.title.x = element_blank(),
+    legend.position = 'none',
+    axis.title.y = element_text(size = 14, color ='black')) +
+  labs(x = NULL, y = expression(log[10] * "(mean RNA coverage)"))
+# cov_sv_plt
 
+kruskal.test(log_cov ~ sv_type, data = n2_rna_svs)
 
+# Pairwise Wilcoxon tests
+wilcox_stats <- n2_rna_svs %>%
+  rstatix::wilcox_test(log_cov ~ sv_type, p.adjust.method = "BH") %>% rstatix::add_significance("p.adj") %>%
+  rstatix::add_xy_position(x = "sv_type", formula = log_cov ~ sv_type, step.increase = 1) %>%
+  dplyr::filter(group1 == "NONE")
 
+wilcox_stats
 
+cov_sv_plt <- cov_sv_plt +
+  ggpubr::stat_pvalue_manual(wilcox_stats, label = "p.adj.signif", size = 4, vjust = 0.75, tip.length = 0.01)
+cov_sv_plt
 
-
-
-
-
-
+# Save the plot:
+ggsave("../../figures/supplementary/n2_sv_expresssion_plt.png", cov_sv_plt, width = 7.5, height = 6, dpi = 600)
 
 
 
@@ -893,7 +931,7 @@ colnames(all_collapsed_svs) <- c("chrom","start","end")
 all_collapsed_svs <- all_collapsed_svs %>% dplyr::mutate(length = end - start)
 
 
-chrom_sizes <- readr::read_tsv("../../data/N2.WS283.cleaned.fa.fai", col_names = c("chrom", "start", "end"))
+chrom_sizes <- readr::read_tsv("../../data/genomic_resources/N2.WS283.cleaned.fa.fai", col_names = c("chrom", "start", "end"))
 arm_domains <- readr::read_csv("../../processed_data/genome_resources/annotation/chromosome_domain_Celegans.csv") %>%
   dplyr::select(chrom,left,right) %>%
   dplyr::mutate(left=left*1e3,right=right*1e3) %>%
