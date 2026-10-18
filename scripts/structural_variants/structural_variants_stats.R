@@ -839,7 +839,7 @@ kruskal.test(log_cov ~ sv_type, data = n2_rna_svs)
 
 # Pairwise Wilcoxon tests
 wilcox_stats <- n2_rna_svs %>%
-  rstatix::wilcox_test(log_cov ~ sv_type, p.adjust.method = "BH") %>% rstatix::add_significance("p.adj") %>%
+  rstatix::wilcox_test(log_cov ~ sv_type, paired = FALSE, p.adjust.method = "BH") %>% rstatix::add_significance("p.adj") %>% # Mann Whitney U test
   rstatix::add_xy_position(x = "sv_type", formula = log_cov ~ sv_type, step.increase = 1) %>%
   dplyr::filter(group1 == "NONE")
 
