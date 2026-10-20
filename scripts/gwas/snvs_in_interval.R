@@ -180,7 +180,7 @@ snvs_per_gene <- n2_genes_ROI %>%
 
 
 glc_1_variants <- readr::read_csv("../../processed_data/gwas/CSQ_glc-1.csv") %>%
-  dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
+  dplyr::select(-id, -target_consequence, -gene_id) %>%
   dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
   tidyr::separate_rows(strains, sep = " ") %>%
   dplyr::filter(strains %in% alt_strains) %>%
@@ -205,6 +205,7 @@ f11_18_variants <- readr::read_csv("../../processed_data/gwas/CSQ_F11A5.18.csv")
 
 f11_5_variants <- readr::read_csv("../../processed_data/gwas/CSQ_F11A5.5.csv") %>%
   dplyr::select(-id, -target_consequence, -gene_id, -dna_change) %>%
+  dplyr::filter(transcript == "F11A5.5b.1") %>%
   dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
   tidyr::separate_rows(strains, sep = " ") %>%
   dplyr::filter(strains %in% alt_strains) %>%
@@ -221,12 +222,9 @@ irld26_variants <- readr::read_csv("../../processed_data/gwas/CSQ_irld26.csv") %
   tidyr::separate_rows(strains, sep = " ") %>%
   dplyr::filter(strains %in% c("ECA36","ECA369")) %>%
   dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
-  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") #%>%
-  # dplyr::filter(grepl("missense",consequence))
-  # dplyr::distinct(across(-amino_acid_change))
-  # dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
-  # dplyr::filter(alt_specific == TRUE) %>%
-  # dplyr::filter(blosum <= 0)
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::filter(strains == "ECA36", grepl("missense",consequence)) %>%
+  dplyr::filter(blosum < 0)
 
 
 
@@ -236,20 +234,8 @@ oac15_variants <- readr::read_csv("../../processed_data/gwas/CSQ_oac15.csv") %>%
   tidyr::separate_rows(strains, sep = " ") %>%
   dplyr::filter(strains %in% c("ECA36","ECA369")) %>%
   dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
-  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") #%>%
-  # dplyr::filter(grepl("missense",consequence))
-  # dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
-  # dplyr::filter(alt_specific == TRUE) %>%
-  # dplyr::filter(blosum <= 0)
-
-
-
-
-
-
-
-
-
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::filter(blosum < 0)
 
 
 
