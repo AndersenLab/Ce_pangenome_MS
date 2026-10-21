@@ -834,9 +834,9 @@ all_hap_bg <- ggplot() +
 all_hap_bg
 
 # Save plot:
-ggsave("../../figures/supplementary/abamectin_REF_ALT_haplotypes.png", all_hap_bg, width = 7.5, height = 7, dpi = 600)
-write.table(plot_ad %>% dplyr::filter(alias == "glc-1") %>% dplyr::select(strain = STRAIN, gene = Parent, alias), "../../processed_data/gwas/glc1_orthos.tsv", quote = F, col.names = T,
-            row.names = F, sep = "\t")
+# ggsave("../../figures/supplementary/abamectin_REF_ALT_haplotypes.png", all_hap_bg, width = 7.5, height = 7, dpi = 600)
+# write.table(plot_ad %>% dplyr::filter(alias == "glc-1") %>% dplyr::select(strain = STRAIN, gene = Parent, alias), "../../processed_data/gwas/glc1_orthos.tsv", quote = F, col.names = T,
+            # row.names = F, sep = "\t")
 
 
 # Ensure that none of the 5 missing N2 genes are in any of the ALT strains
