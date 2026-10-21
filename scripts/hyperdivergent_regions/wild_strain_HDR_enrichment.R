@@ -87,12 +87,15 @@ ipr_desc_most_strain <- ws_hdr_gene_class %>%
   dplyr::ungroup() %>%
   dplyr::arrange(IPR_description, desc(count_ipr)) %>%
   dplyr::mutate(strain = factor(strain, levels = strain)) %>%
-  dplyr::mutate(IPR_description = ifelse(IPR_description == "Domain of unknown function DUF38/FTH, Caenorhabditis species", "Domain of unknown function DUF38/FTH,\nCaenorhabditis species", IPR_description))
+  dplyr::mutate(IPR_description = ifelse(IPR_description == "Domain of unknown function DUF38/FTH, Caenorhabditis species", "Domain of unknown function DUF38/FTH,\nCaenorhabditis species", 
+                                         ifelse(IPR_description == "7TM GPCR, serpentine receptor class w (Srw)", "7TM GPCR, serpentine receptor\nclass w (Srw)",
+                                                ifelse(IPR_description == "7TM GPCR, serpentine receptor class h (Srh)", "7TM GPCR, serpentine receptor\nclass h (Srh)", 
+                                                       ifelse(IPR_description == "Nuclear hormone receptor-like domain superfamily", "Nuclear hormone receptor-like\ndomain superfamily", IPR_description)))))
 
-geo.colors <- c("7TM GPCR, serpentine receptor class h (Srh)" = "blue", "7TM GPCR, serpentine receptor class w (Srw)" = "cyan",
+geo.colors <- c("7TM GPCR, serpentine receptor\nclass h (Srh)" = "blue", "7TM GPCR, serpentine receptor\nclass w (Srw)" = "cyan",
                 "C-type lectin fold" = "forestgreen", "Domain of unknown function DUF38/FTH,\nCaenorhabditis species" = "gray40", 
                 "E3 ubiquitin-protein ligase RING-type" = "chocolate", "F-box domain" = "Orange", "GPCR, rhodopsin-like, 7TM" = "skyblue", "MATH/TRAF domain" = "red3", 
-                "Nuclear hormone receptor-like domain superfamily" = "red", "SKP1/BTB/POZ domain superfamily" = "purple", "TRA-1 regulated" = 'violet', "Zinc finger, RING/FYVE/PHD-type" = "pink")
+                "Nuclear hormone receptor-like\ndomain superfamily" = "red", "SKP1/BTB/POZ domain superfamily" = "purple", "TRA-1 regulated" = 'violet', "Zinc finger, RING/FYVE/PHD-type" = "pink")
 
 # Most abundant IPR term
 ipr_abundance_hdr <- ggplot(data = ipr_desc_most_strain) + 
@@ -109,7 +112,7 @@ ipr_abundance_hdr <- ggplot(data = ipr_desc_most_strain) +
     axis.title.y = element_blank(),
     plot.margin = margin(l = 3, r = 7, t = 5, b = 0),
     legend.position = "bottom",
-    legend.text = element_text(size = 4.5, color = "black"),
+    legend.text = element_text(size = 6, color = "black"),
     legend.margin = margin(t = -5, r = 0, b = 0, l = 0),
     legend.box.margin = margin(t = -5, r = 0, b = 0, l = 0),
     plot.title = element_text(size = 8, color = "black", hjust = 0.5)
