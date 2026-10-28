@@ -606,7 +606,7 @@ n2_genes_plt <- N2_gff %>%
   tidyr::separate(attributes, into = c("wbgene","other"), sep = ";") %>%
   dplyr::mutate(wbgene = gsub("ID=gene:","", wbgene)) %>%
   tidyr::separate(alias, into = c("alias","other"), sep = ",") %>%
-  dplyr::select(chrom = seqid,start,end, wbgene, alias, sequence_name) %>%
+  dplyr::select(chrom = seqid,start, end, wbgene, alias, sequence_name) %>%
   dplyr::filter(chrom != "MtDNA")
 
 MAF_thresh <- round(0.05 * 141)
@@ -805,24 +805,35 @@ sv_overlap_ipr <- sv_overlap_genes %>% dplyr::left_join(n2_ipr_clean, by = c('se
 #############################################################################
 # What are the expression level difference for genes that have SVs in wild strains, and those that do not?
 #############################################################################
-n2_rna <- readr::read_tsv("../../processed_data/gwas/rna_aln/coverage/ALL_strains_cov.txt", col_names = c("chrom","start","end","gene","sum_cov","mean_cov", "strain")) %>%
-  dplyr::filter(strain == "N2") 
+n2_ws_expression <- readr::read_csv("../../processed_data/gwas/zhang_2022_NatureComm_SuppData1.csv") %>%
+  dplyr::select(transcript, gene_name = GeneName, wbgene = WormBaseGeneID, biotype, any_of(strains)) %>% # 48 strains
+  dplyr::filter(biotype == "protein-coding")
+
+ws276 <- readr::read_tsv("../../processed_data/genome_resources/annotation/WS276.mRNA_coords_tranName.tsv", col_names = c("start","end", "tran")) %>%
+  dplyr::mutate(tran_len = end - start) %>%
+  dplyr::mutate(tran = gsub("ID=transcript:","",tran)) %>%
+  dplyr::left_join(n2_ws_expression, by = c("tran" = "transcript")) %>%
+  dplyr::select(1:7, -gene_name, -biotype) %>%
+  dplyr::filter(!is.na(wbgene)) %>%
+  dplyr::group_by(wbgene) %>%
+  dplyr::filter(tran_len == max(tran_len)) %>%
+  dplyr::ungroup() %>%
+  dplyr::pull(tran)
 
 n2_rna_svs <- n2_genes_plt %>%
-  dplyr::left_join(n2_rna, by = c("wbgene" = "gene")) %>%
-  dplyr::select(chrom = chrom.x, start = start.x, end = end.x, wbgene, alias, sequence_name, sum_cov, mean_cov) %>%
-  dplyr::left_join(svs_inCodingRegions, by = c("chrom","start","end","alias", "sequence_name")) %>%
-  dplyr::select(-i.start, -i.end, -overlap) %>%
-  dplyr::mutate(gene_len = end - start) %>%
+  dplyr::left_join(n2_ws_expression, by = c("wbgene")) %>%
+  dplyr::filter(transcript %in% ws276) %>%
+  dplyr::left_join(svs_inCodingRegions, by = c("alias", "wbgene")) %>%
+  dplyr::select(chrom = chrom.x, start = start.x, end = end.x, wbgene, alias, sequence_name = sequence_name.x, everything(), -chrom.y, -start.y, -end.y, -sequence_name.y, -i.start, -i.end, -overlap) %>%
   dplyr::mutate(sv_type = ifelse(is.na(sv_type), "NONE", sv_type)) %>%
-  dplyr::filter(mean_cov != 0) %>% # 2,009 N2 genes do not have any RNA coverage
-  dplyr::mutate(log_cov = log10(mean_cov), 
-                sv_type = factor(sv_type, levels = c("NONE", "DEL", "INS", "INV"))) %>%
+  dplyr::select(1:9, sv_type, everything()) %>%
+  dplyr::mutate(average_exp = rowMeans(dplyr::pick(11:dplyr::last_col()), na.rm = TRUE)) %>%
+  dplyr::mutate(sv_type = factor(sv_type, levels = c("NONE", "DEL", "INS", "INV"))) %>% # 15,342 genes retained
   dplyr::distinct()
 
 cov_sv_plt <- ggplot(n2_rna_svs) +
-  geom_boxplot(aes(x = sv_type, y = log_cov, fill = sv_type), alpha = 0.5, outliers = FALSE) +
-  geom_jitter(aes(x = sv_type, y = log_cov), width = 0.15, alpha = 0.25, size = 0.5) +
+  geom_boxplot(aes(x = sv_type, y = average_exp, fill = sv_type), alpha = 0.5, outliers = FALSE) +
+  geom_jitter(aes(x = sv_type, y = average_exp), width = 0.15, alpha = 0.25, size = 0.5) +
   scale_fill_manual(values = c("NONE" = "black", "DEL" = "red", "INS" = "blue", "INV" = "gold")) +
   theme(
     panel.background = element_blank(),
@@ -832,21 +843,21 @@ cov_sv_plt <- ggplot(n2_rna_svs) +
     axis.title.x = element_blank(),
     legend.position = 'none',
     axis.title.y = element_text(size = 14, color ='black')) +
-  labs(x = NULL, y = expression(log[10] * "(mean RNA coverage)"))
+  labs(x = NULL, y = "Expression (normalized gene-level TPM)")
 # cov_sv_plt
 
-kruskal.test(log_cov ~ sv_type, data = n2_rna_svs)
+kruskal.test(average_exp ~ sv_type, data = n2_rna_svs)
 
 # Pairwise Wilcoxon tests
 wilcox_stats <- n2_rna_svs %>%
-  rstatix::wilcox_test(log_cov ~ sv_type, paired = FALSE, p.adjust.method = "BH") %>% rstatix::add_significance("p.adj") %>% # Mann Whitney U test
-  rstatix::add_xy_position(x = "sv_type", formula = log_cov ~ sv_type, step.increase = 1) %>%
+  rstatix::wilcox_test(average_exp ~ sv_type, paired = FALSE, p.adjust.method = "BH") %>% rstatix::add_significance("p.adj") %>% # Mann Whitney U test
+  rstatix::add_xy_position(x = "sv_type", formula = average_exp ~ sv_type, step.increase = 0.2) %>%
   dplyr::filter(group1 == "NONE")
 
 wilcox_stats
 
 cov_sv_plt <- cov_sv_plt +
-  ggpubr::stat_pvalue_manual(wilcox_stats, label = "p.adj.signif", size = 4, vjust = 0.75, tip.length = 0.01)
+  ggpubr::stat_pvalue_manual(wilcox_stats, label = "p.adj.signif", size = 4, vjust = 0.1, tip.length = 0.01)
 cov_sv_plt
 
 # Save the plot:
