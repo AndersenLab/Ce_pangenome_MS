@@ -9,7 +9,7 @@ library(cowplot)
 # Lifting over N2 HDRs to wild strains #
 # ======================================================================================================================================================================================== #
 # Loading in HDRs and wild strain list....
-hdrs <- readr::read_tsv("../../data/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain"))
+hdrs <- readr::read_tsv("../../data/genomic_resources/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain"))
 WSs <- readr::read_tsv("../../tables/strain_SVs_cum_length.tsv") %>% dplyr::distinct(strain) %>% dplyr::filter(strain != "CGC1") %>% dplyr::pull(strain)
 
 # Filtering for HDRs in pangenome strain set
@@ -913,6 +913,75 @@ relative_gene_set_HDR
 
 # write.table(hdr_nonHDR_prop_geneset, "../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
 ###################################################################
+
+
+
+test <- hdr_nonHDR_prop_geneset %>%
+  dplyr::select(strain, `Gene set`, ws_class_count_inHDR, ws_class_outsideHDRs) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(total_inHDR = sum(ws_class_count_inHDR),
+                total_outHDR = sum(ws_class_outsideHDRs)) %>%
+  dplyr::mutate(percent_class_HDR = ws_class_count_inHDR / total_inHDR * 100,
+                percent_class_outHDR = ws_class_outsideHDRs / total_outHDR * 100) %>%
+  dplyr::mutate(`Gene set` = factor(`Gene set`, levels = c("Core", "Accessory", "Private"))) %>%
+  dplyr::ungroup()
+
+order <- test %>%
+  dplyr::arrange(desc(total)) %>%
+  dplyr::distinct(strain) %>%
+  dplyr::pull(strain)
+
+inHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_HDR, fill = `Gene set`))) +
+  geom_col(alpha = 0.5, color = 'black') +
+  scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_rect(color= 'black', fill = NA),
+    axis.text.x = element_blank(),
+    axis.title.x = element_blank(),
+    plot.margin = margin(l = 20, t = 10, r = 5, b = 10),
+    axis.text.y = element_text(size = 14, color = "black"),
+    axis.title.y = element_blank(),
+    legend.position = 'none'
+  ) +
+  scale_y_continuous(expand = c(0,0))
+
+ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = ws_class_count_inHDR, fill = `Gene set`))) +
+  geom_col() +
+  scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_rect(color= 'black', fill = NA),
+    axis.text.x = element_text(size = 11, color = 'black', angle = 60, hjust = 1),
+    axis.title.x = element_blank(),
+    axis.text.y = element_text(size = 14, color = "black"),
+    axis.title.y = element_blank()
+  ) +
+  scale_y_continuous(expand = c(0,0))
+
+
+outHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_outHDR, fill = `Gene set`))) +
+  geom_col(alpha = 0.5, color = 'black') +
+  scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  theme(
+    panel.background = element_blank(),
+    panel.border = element_rect(color= 'black', fill = NA),
+    axis.text.x = element_text(size = 11, color = 'black', angle = 60, hjust = 1),
+    axis.title.x = element_blank(),
+    plot.margin = margin(l = 20, t = 5, r = 5, b = 5),
+    legend.position = 'none',
+    axis.text.y = element_text(size = 14, color = "black"),
+    axis.title.y = element_blank()
+  ) +
+  scale_y_continuous(expand = c(0,0))
+
+percent <- cowplot::plot_grid(
+  inHDR, outHDR,
+  nrow = 2,
+  align = "v",
+  labels = c("a","b"))
+percent
+
 
 
 # Average proportion of WS genes in each gene set among all wild strains
