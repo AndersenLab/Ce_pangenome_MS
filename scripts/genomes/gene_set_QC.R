@@ -75,15 +75,17 @@ label_df_bottom_n2 <- nonRefGenes_long_n2 %>%
   dplyr::filter(metric == "nonN2_genes") %>% 
   dplyr::arrange(count) %>% dplyr::slice_head(n = 10)
 
-labels_df_n2 <- label_df_top_n2 %>% dplyr::bind_rows(label_df_bottom_n2)
+labels_df_n2 <- label_df_top_n2 %>% dplyr::bind_rows(label_df_bottom_n2) %>% dplyr::mutate(metric = "non-N2 genes")
 
-n2 <- ggplot(nonRefGenes_long_n2, aes(x = metric, y = count)) +
+n2 <- ggplot(nonRefGenes_long_n2 %>% 
+               dplyr::mutate(metric = ifelse(metric == "nonN2_genes", "non-N2 genes",
+                                             ifelse(metric == "nonN2_Orthogroups", "non-N2 orthogroups", metric))), aes(x = metric, y = count)) +
   geom_boxplot(aes(fill = metric), outlier.size = 0.6, width = 0.7, outlier.shape = NA, alpha = 0.5) +
   geom_line(aes(group = strain), alpha = 0.3) +
   geom_point(aes(group = strain),size = 1.5, alpha = 0.6) +
   geom_text_repel(data = labels_df_n2, aes(label = strain), size = 2, max.overlaps = 100) +
   labs(y = "Count") +
-  scale_fill_manual(values = c("nonN2_genes" = "gray70", "nonN2_Orthogroups" = "gray30")) +
+  scale_fill_manual(values = c("non-N2 genes" = "gray70", "non-N2 orthogroups" = "gray30")) +
   theme(
     panel.background = element_blank(),
     legend.position = "none",
@@ -91,7 +93,7 @@ n2 <- ggplot(nonRefGenes_long_n2, aes(x = metric, y = count)) +
     axis.title.x = element_blank(),
     axis.title.y = element_text(size = 10, color = 'black'),
     axis.text.y = element_text(size = 9, color = 'black'),
-    axis.text.x = element_text(size = 9, color = 'black')) +
+    axis.text.x = element_text(size = 7.5, color = 'black')) +
   coord_cartesian(ylim = c(800,5500))
 
 # How many non-N2 genes on average?
@@ -166,15 +168,17 @@ label_df_bottom <- nonRefGenes_long %>%
   dplyr::filter(metric == "nonN2BRAKER_genes") %>% 
   dplyr::arrange(count) %>% dplyr::slice_head(n = 10)
 
-labels_df <- label_df_top %>% dplyr::bind_rows(label_df_bottom)
+labels_df <- label_df_top %>% dplyr::bind_rows(label_df_bottom) %>% dplyr::mutate(metric = "non-N2 BRAKER genes")
 
-n2BRAKER_ <- ggplot(nonRefGenes_long, aes(x = metric, y = count)) +
+n2BRAKER_ <- ggplot(nonRefGenes_long %>%
+                      dplyr::mutate(metric = ifelse(metric == "nonN2BRAKER_genes", "non-N2 BRAKER genes", 
+                                                    ifelse(metric == "nonN2BRAKER_Orthogroups", "non-N2 BRAKER orthogroups", metric))), aes(x = metric, y = count)) +
   geom_boxplot(aes(fill = metric), outlier.size = 0.6, width = 0.7, outlier.shape = NA, alpha = 0.5) +
   geom_line(aes(group = strain), alpha = 0.3) +
   geom_point(aes(group = strain),size = 1.5, alpha = 0.6) +
   geom_text_repel(data = labels_df, aes(label = strain), size = 2, max.overlaps = 100) +
   labs(y = "Count") +
-  scale_fill_manual(values = c("nonN2BRAKER_genes" = "gray70", "nonN2BRAKER_Orthogroups" = "gray30")) +
+  scale_fill_manual(values = c("non-N2 BRAKER genes" = "gray70", "non-N2 BRAKER orthogroups" = "gray30")) +
   theme(
     panel.background = element_blank(),
     legend.position = "none",
@@ -183,7 +187,7 @@ n2BRAKER_ <- ggplot(nonRefGenes_long, aes(x = metric, y = count)) +
     axis.ticks.y = element_blank(),
     axis.title.y = element_blank(),
     axis.text.y = element_blank(),
-    axis.text.x = element_text(size = 9, color = 'black')) +
+    axis.text.x = element_text(size = 7.5, color = 'black')) +
   coord_cartesian(ylim = c(800,5500))
 
 
@@ -271,15 +275,18 @@ label_df_bottom <- nonRefGenes_long %>%
   dplyr::filter(metric == "N2_specific_genes") %>% 
   dplyr::arrange(count) %>% dplyr::slice_head(n = 10)
 
-labels_df <- label_df_top %>% dplyr::bind_rows(label_df_bottom)
+labels_df <- label_df_top %>% dplyr::bind_rows(label_df_bottom) %>%
+  dplyr::mutate(metric = 'N2-specific genes')
 
-n2_spec <- ggplot(nonRefGenes_long, aes(x = metric, y = count)) +
+n2_spec <- ggplot(nonRefGenes_long %>%
+                    dplyr::mutate(metric = ifelse(metric == "N2_specific_genes", "N2-specific genes",
+                                                  ifelse(metric == "N2_specific_Orthogroups", "N2-specific orthogroups", metric))), aes(x = metric, y = count)) +
   geom_boxplot(aes(fill = metric), outlier.size = 0.6, width = 0.7, outlier.shape = NA, alpha = 0.5) +
   geom_line(aes(group = strain), alpha = 0.3) +
   geom_point(aes(group = strain),size = 1.5, alpha = 0.6) +
   geom_text_repel(data = labels_df, aes(label = strain), size = 3, max.overlaps = 100) +
   labs(y = "Count") +
-  scale_fill_manual(values = c("N2_specific_genes" = "orange", "N2_specific_Orthogroups" = "#DB6333")) +
+  scale_fill_manual(values = c("N2-specific genes" = "orange", "N2-specific orthogroups" = "#DB6333")) +
   theme(
     panel.background = element_blank(),
     legend.position = "none",

@@ -41,20 +41,21 @@ world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 
 # Plotting where isotype strains have been collected and which ones were selected for sequencing
 MAP <- ggplot() +
-  geom_sf(data = world, fill = "white", color = "black", linewidth = 0.2) +
+  geom_sf(data = world, fill = "white", color = "gray30", linewidth = 0.2) +
   geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 1) +
-  scale_color_manual(values = c("Yes" = "red", "No" = "black")) +
+  scale_color_manual(values = c("Yes" = "red", "No" = "darkblue")) +
   coord_sf(expand = FALSE) +
   theme_minimal() +
   labs(x = NULL, y = NULL, color = "Selected for\nHiFi sequencing") +
   theme(
     legend.title = element_text(size = 11, color = 'black'),
     legend.text = element_text(size = 11, color = 'black'),
-    legend.position = "inside",
-    legend.position.inside = c(0.1,0.25),
+    legend.position = "none",
+    # legend.position.inside = c(0.1,0.25),
     axis.text = element_blank(),
     panel.grid = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 3)))
+MAP
 
 
 ####################################################################################################
@@ -216,9 +217,9 @@ top <- ggplot(plot_df, aes(x = metric, y = value)) +
 top
 
 bottom <- ggplot(plot_df, aes(x = metric, y = value)) +
-  geom_point(position = position_jitter(width = 0.25), size = 0.3, color = 'black') +
   geom_boxplot(aes(fill = metric), outlier.shape = NA, alpha = 0.5, fatten = 2) +
-  scale_fill_manual(values = c("Asembly" = "blue", "N50" = "seagreen", "N90" = "orange")) +
+  geom_point(position = position_jitter(width = 0.25), size = 0.3, color = 'black') +
+  scale_fill_manual(values = c("Assembly" = "gray", "N50" = "gray", "N90" = "gray")) +
   theme_bw() +
   theme(
     axis.title.x = element_blank(),
@@ -260,4 +261,3 @@ final_plot <- cowplot::plot_grid(
 
 # Save the plot
 ggsave("../../figures/strain_selection_genome_stats.png", final_plot, width = 7.5, height = 7.5, dpi = 600)
-

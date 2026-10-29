@@ -118,11 +118,15 @@ pca_df <- pca_df %>%
   dplyr::left_join(strain_geo, by = "strain") %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
-geo.colors <- c("Big Island"="black", "Molokai" = "#66C2A5", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "purple", "Africa"="green", "North America" = "pink", "Europe" = "#E41A1C", "Atlantic" = "blue", 
+geo.colors <- c("Big Island"="black", "Moloka'i" = "#66C2A5", "Mau'i" = "yellow", "O'ahu" = "brown", "Kaua'i" = "purple", "Africa"="green", "North America" = "pink", "Europe" = "#E41A1C", "Atlantic" = "blue", 
                 "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
 
 pca_df <- pca_df %>%
-  dplyr::mutate(label = ifelse(PC2 > 50, strain, NA))
+  dplyr::mutate(label = ifelse(PC2 > 50, strain, NA)) %>%
+  dplyr::mutate(geo = ifelse(geo == "Kauai", "Kaua'i",
+                             ifelse(geo == "Molokai", "Moloka'i",
+                                    ifelse(geo == "Oahu", "O'ahu",
+                                           ifelse(geo == "Maui", "Mau'i", geo)))))
 
 PCA <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
   geom_text_repel(aes(label = label), size = 2, max.overlaps = Inf, show.legend = FALSE) +

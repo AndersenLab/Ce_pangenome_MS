@@ -801,8 +801,8 @@ prop_size_genes_inHDRs <- ggplot(data = prop_genes_in_hdrs) +
     axis.title.y = element_text(size = 10, color = 'black'),
     axis.text.y = element_text(size = 10, color = 'black'),
     plot.margin = margin(t = 8, b = 5, l = 5, r = 5)) +
-  labs(y = "Proportion of wild strain genes in HDRs (%)") +
-  scale_y_continuous(name = "Proportion of wild strain genes in HDRs (%)", 
+  labs(y = "Percentage of wild strain genes in HDRs (%)") +
+  scale_y_continuous(name = "Percentage of wild strain genes in HDRs (%)", 
                      sec.axis = sec_axis(~. / 1 ,name = "Total wild strain HDRs span (Mb)"), expand = expansion(mult = c(0, .05))) 
 prop_size_genes_inHDRs
 
@@ -939,6 +939,7 @@ inHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)),
     panel.border = element_rect(color= 'black', fill = NA),
     axis.text.x = element_blank(),
     axis.title.x = element_blank(),
+    axis.ticks.x = element_blank(),
     plot.margin = margin(l = 20, t = 10, r = 5, b = 10),
     axis.text.y = element_text(size = 14, color = "black"),
     axis.title.y = element_blank(),
@@ -963,6 +964,7 @@ ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x =
 outHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_outHDR, fill = `Gene set`))) +
   geom_col(alpha = 0.5, color = 'black') +
   scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  scale_y_reverse(expand = c(0,0)) +
   theme(
     panel.background = element_blank(),
     panel.border = element_rect(color= 'black', fill = NA),
@@ -972,8 +974,7 @@ outHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order))
     legend.position = 'none',
     axis.text.y = element_text(size = 14, color = "black"),
     axis.title.y = element_blank()
-  ) +
-  scale_y_continuous(expand = c(0,0))
+  ) 
 
 percent <- cowplot::plot_grid(
   inHDR, outHDR,

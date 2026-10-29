@@ -46,10 +46,10 @@ count_stats <- summary %>%
 
 sv_count <- ggplot() +
   geom_col(data = summary, aes(x = strain, y = type_count, fill = sv_type), position = position_dodge(width = 0.8)) +
-  geom_hline(data = count_stats, aes(yintercept = average_count, color = sv_type), linetype = "dashed", linewidth = 0.5) +
+  geom_hline(data = count_stats, aes(yintercept = average_count, color = sv_type), linetype = "solid", linewidth = 0.5) +
   scale_fill_manual(values = c("INS" = "blue", "DEL" = "red", "INV" = "gold")) +
   scale_color_manual(values = c("INS" = "blue", "DEL" = "red", "INV" = "gold")) +
-  labs(y = "Count of SV type for wild strains", fill = "SV type") +
+  labs(y = "SV count", fill = "SV type") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
@@ -79,7 +79,7 @@ prop <- summary %>%
 prop_plt <- ggplot() +
   geom_bar(data = prop, aes(x = strain, y = prop, fill = sv_type), stat = "identity") +
   scale_fill_manual(values = c("INS" = "blue", "DEL" = "red", "INV" = "gold")) +
-  labs(y = "Proportion of SVs", fill = "SV type") +
+  labs(y = "Percentage of SVs (%)", fill = "SV type") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
@@ -683,7 +683,7 @@ sv_gene_overlap <- ggplot() +
   geom_bar(data = plt_stats, aes(x = sv_type, y = prop, fill = region), stat = "identity") +
   geom_text(data = plt_stats, aes(x = sv_type, y = prop, label = region_count, group = region), position = position_stack(vjust = 0.5), color = "white", size = 4) +
   scale_fill_manual(values = c("overlaps_PCgene" = "red", "non-PC_region" = "gray60")) +
-  labs(y = "Proportion of N2 genes (%)", fill = "Region") +
+  labs(y = "Percentage of N2 genes (%)", fill = "Region") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),

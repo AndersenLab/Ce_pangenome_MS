@@ -99,7 +99,11 @@ geo <- geo_initial %>%
   dplyr::filter(isotype %in% WSs) %>%
   dplyr::select(strain = isotype, Geo = geo) %>%
   dplyr::add_row(strain = "N2", Geo = "Europe") %>%
-  dplyr::add_row(strain = "CGC1", Geo = "Europe")
+  dplyr::add_row(strain = "CGC1", Geo = "Europe") %>%
+  dplyr::mutate(Geo = ifelse(Geo == "Kauai", "Kaua'i",
+                             ifelse(Geo == "Molokai", "Moloka'i", 
+                                    ifelse(Geo == "Oahu", "O'ahu", 
+                                           ifelse(Geo == "Maui", "Mau'i", Geo)))))
 
 row_annotation <- geo %>%
   tibble::column_to_rownames("strain")
@@ -126,10 +130,10 @@ ann_colors <- list(
     "South America" = "forestgreen",
     "Indian Ocean" = "chocolate",
     "Big Island" = "black", 
-    "Molokai" = "#66C2A5", 
-    "Maui" = "yellow", 
-    "Oahu" = "brown", 
-    "Kauai" = "purple", 
+    "Moloka'i" = "#66C2A5", 
+    "Mau'i" = "yellow", 
+    "O'ahu" = "brown", 
+    "Kaua'i" = "purple", 
     "Africa" = "green", 
     "North America" = "pink", 
     "Europe" = "#E41A1C", 
