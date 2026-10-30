@@ -467,7 +467,7 @@ plot_IPR_all_diff <- ggplot(diff) +
   guides(
     fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 1),
     size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
-    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 0.5))) +
+    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 3))) +
   labs(title = "Enriched IPR terms for wild strain genes in HDRs",  x = "Gene count", size = "Fold enrichment", fill = expression(-log[10]~"(corrected p-value)"))
 plot_IPR_all_diff
 
@@ -478,72 +478,86 @@ write.table(diff, "../../tables/enriched_IPR_inHDRs.tsv", row.names = F, col.nam
 ## Relative fraction of HDR genes in each gene set
 hdr_nonHDR_prop_geneset <- readr::read_tsv("../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv") 
 
-strain_order <- hdr_nonHDR_prop_geneset %>% dplyr::filter(`Gene set` == "Private") %>%
-  dplyr::arrange(desc(scaled_geneSet_props_HDR)) %>%
-  dplyr::distinct(strain) %>%
-  dplyr::pull(strain)
+# Box plots:
+percent_box_vis <- hdr_nonHDR_prop_geneset %>%
+  dplyr::select(strain, `Gene set`, ws_class_count_inHDR, ws_class_outsideHDRs) %>%
+  dplyr::group_by(strain) %>%
+  dplyr::mutate(total_inHDR = sum(ws_class_count_inHDR),
+                total_outHDR = sum(ws_class_outsideHDRs)) %>%
+  dplyr::mutate(percent_class_HDR = ws_class_count_inHDR / total_inHDR * 100,
+                percent_class_nonHDR = ws_class_outsideHDRs / total_outHDR * 100) %>%
+  dplyr::mutate(`Gene set` = factor(`Gene set`, levels = c("Core", "Accessory", "Private"))) %>%
+  dplyr::ungroup() %>%
+  dplyr::select(strain, gene_set = `Gene set`, ws_class_count_HDR = ws_class_count_inHDR, ws_class_count_nonHDR = ws_class_outsideHDRs, percent_class_HDR, percent_class_nonHDR) %>%
+  tidyr::pivot_longer(
+    cols = c(ws_class_count_HDR, ws_class_count_nonHDR, percent_class_HDR, percent_class_nonHDR),
+    names_to = c(".value", "region"),
+    names_pattern = "(ws_class_count|percent_class)_(HDR|nonHDR|outHDR)"
+  ) %>%
+  dplyr::mutate(region = ifelse(region == "HDR", "HDR", "non-HDR")) %>%
+  dplyr::mutate(gene_set = factor(gene_set, levels = c("Core", "Accessory", "Private"))) %>%
+  dplyr::mutate(gene_region = interaction(gene_set, region, sep = "\n", lex.order = TRUE))
 
-hdr_nonHDR_prop_geneset <- hdr_nonHDR_prop_geneset %>% dplyr::mutate(strain = factor(strain, levels = strain_order),
-                                                                     `Gene set`  = factor(`Gene set`, levels = c("Core", "Accessory", "Private"))) 
-
-# Plotting relative fraction in HDRs
-hdr <- ggplot(data = hdr_nonHDR_prop_geneset) +
-  geom_col(aes(x = strain, y = scaled_geneSet_props_HDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
-  scale_fill_manual(values = c(
-    "Core" = "green4",
-    "Accessory" = "#DB6333",
-    "Private" = "magenta3"
-  )) +
+# Looking at count, scaled by total genes in each genes set in each region
+box_plot_count <- ggplot(percent_box_vis, aes(x = region, y = ws_class_count, fill = gene_set)) +
+  geom_boxplot(position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 0.05, alpha = 0.45) +
+  scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  theme_bw() +
   theme(
-    axis.text.x = element_blank(),
-    legend.position = 'none',
-    axis.ticks.x = element_blank(),
     axis.title.x = element_blank(),
-    axis.title = element_blank(),
-    plot.margin = margin(l = 40, r = 40, t = 10),
-    axis.text.y = element_text(size = 10, color = 'black')
+    axis.text.x = element_text(size = 9, color = 'black'),
+    panel.grid = element_blank(),
+    strip.text = element_blank(),
+    legend.position  = 'none',
+    panel.border = element_rect(color = 'black', fill = NA),
+    # strip.text = element_text(size = 8.5, color = 'black'),
+    axis.text.y = element_text(size = 9, color = 'black'),
+    axis.title.y = element_text(size = 11, color = 'black')
   ) +
-  scale_y_continuous(expand = c(0,0), breaks = c(0.25, 0.5, 0.75, 1)) 
+  labs(x = NULL, y = "Number of genes") 
+box_plot_count
 
-# Plotting relative fraction outside HDRs
-nonhdr <- ggplot(data = hdr_nonHDR_prop_geneset) +
-  geom_col(aes(x = strain, y = scaled_geneSet_props_NONHDR, fill = `Gene set`), alpha = 0.5, width = 1, color = 'black', linewidth = 0.1) +
-  scale_fill_manual(values = c(
-    "Core" = "green4",
-    "Accessory" = "#DB6333",
-    "Private" = "magenta3"
-  )) +
+
+# Looking at what percentage of WS genes contribute to each gene setx
+box_plot_perc <- ggplot(percent_box_vis, aes(x = gene_region, y = percent_class, fill = gene_set)) +
+  geom_boxplot(position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.5, dodge.width = 0.75), size = 0.05, alpha = 0.45) +
+  scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
+  theme_bw() +
   theme(
-    axis.text.x = element_blank(),
-    legend.position = 'none',
-    axis.ticks.x = element_blank(),
     axis.title.x = element_blank(),
-    axis.title.y = element_blank(),
-    plot.margin = margin(l = 40, r = 40, b = 10),
-    axis.text.y = element_text(size = 10, color = 'black')
+    axis.text.x = element_text(size = 9, color = 'black'),
+    panel.grid = element_blank(),
+    legend.position  = 'none',
+    panel.border = element_rect(color = 'black', fill = NA),
+    strip.text = element_text(size = 8.5, color = 'black'),
+    axis.text.y = element_text(size = 9, color = 'black'),
+    axis.title.y = element_text(size = 11, color = 'black')
   ) +
-  scale_y_continuous(expand = c(0,0))
+  labs(x = NULL, y = "Percent of genes (%)") +
+  coord_cartesian(ylim = c(0,100))
+# box_plot_perc
 
-aligned <- cowplot::align_plots(hdr, nonhdr, align = "v", axis = "lr")
+hdr_ws_genes_stats_plt <- cowplot::plot_grid(
+  box_plot_count, box_plot_perc,
+  nrow = 1,
+  rel_widths = c(0.5,1),
+  align = "h",
+  labels = c("a","b"))
+# hdr_ws_genes_stats_plt
 
-# Each panel should be no more than 2.5in high and 6in wide!!!!!!!!!!!!!!! - into panels A) and B)
-fraction_gene_set_HDRs <- cowplot::plot_grid(cowplot::plot_grid(
-  aligned[[1]],aligned[[2]],
-  nrow = 2) + draw_label("Relative fraction of each gene set", x=0.02, y=0.5, vjust= 1.5, angle=90, size = 11, color = 'black') +
-    draw_label("Genes in HDRs", x=0.97, y=0.75, vjust= 1.5, angle=270, size = 11, color = 'black') +
-    draw_label("Genes not in HDRs", x=0.97, y=0.275, vjust= 1.5, angle=270, size = 11, color = 'black'))
-
-fraction_gene_set_HDRs
 
 # Cowplot with enrichment results
 final_prop_enriched <- cowplot::plot_grid(
-  fraction_gene_set_HDRs, plot_IPR_all_diff,
+  hdr_ws_genes_stats_plt, plot_IPR_all_diff,
   rel_heights = c(0.7,1),
   nrow = 2,
-  labels = c("a","b"))
+  labels = c("a","c"))
+# final_prop_enriched
 
 # Save the final plot
-# ggsave("../../figures/wild_strain_HDRs_gene_set_enrichment.png", final_prop_enriched, width = 7.5, height = 7.5, dpi = 600)
+ggsave("../../figures/wild_strain_HDRs_gene_set_enrichment.png", final_prop_enriched, width = 7.5, height = 8.5, dpi = 600)
 
 
 ##########################################################################################

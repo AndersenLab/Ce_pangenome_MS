@@ -668,9 +668,9 @@ concatenated_stats <- wilcox_results %>% dplyr::mutate(gene_class = "All genes")
 
 all_enr_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = region)) +
   geom_boxplot(position = position_dodge(width = 0.75), outlier.shape = NA, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.75), size = 0.05) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.75), size = 0.05, alpha = 0.45) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
-  stat_pvalue_manual(concatenated_stats, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 2) +
+  stat_pvalue_manual(concatenated_stats, label = "p.adj.signif", x = "stat", y.position = "y.position", inherit.aes = FALSE, color = 'black', size = 3.5) +
   facet_wrap(~gene_class, nrow = 1) +
   labs(y = "Proportion of orthogroups", fill = NULL) +
   theme_bw() +
@@ -678,14 +678,14 @@ all_enr_plot <- ggplot(final_cnv_pav_geneclass, aes(x = stat, y = value, fill = 
     axis.title.x = element_blank(),
     axis.text.x = element_text(size = 9, color = 'black'),
     panel.grid = element_blank(),
-    legend.position  = 'inside',
-    legend.position.inside = c(0.475,0.895),
+    legend.position  = 'none',
+    # legend.position.inside = c(0.475,0.895),
     panel.border = element_rect(color = 'black', fill = NA),
     strip.text = element_text(size = 8.5, color = 'black'),
-    legend.text = element_text(size = 8, color = 'black'),
-    legend.margin = margin(0, 0, 0, 0),
-    legend.box.margin = margin(0, 0, 0, 0),
-    legend.spacing = unit(0, "pt"),
+    # legend.text = element_text(size = 8, color = 'black'),
+    # legend.margin = margin(0, 0, 0, 0),
+    # legend.box.margin = margin(0, 0, 0, 0),
+    # legend.spacing = unit(0, "pt"),
     axis.text.y = element_text(size = 9, color = 'black'),
     axis.title.y = element_text(size = 9, color = 'black')
   )  +

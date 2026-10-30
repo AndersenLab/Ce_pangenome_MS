@@ -195,8 +195,8 @@ av_gasm <- plot_df %>% dplyr::filter(metric == "Assembly") %>% dplyr::summarize(
 
 # Splitting genome stats on the y-axis because of magnitude difference in valuess
 top <- ggplot(plot_df, aes(x = metric, y = value)) +
-  geom_point(position = position_jitter(width = 0.25), size = 0.3, color = 'black') +
   geom_boxplot(aes(fill = metric),  outlier.shape = NA, alpha = 0.5, fatten = 2) +
+  geom_point(position = position_jitter(width = 0.25), size = 0.3, color = 'black') +
   scale_fill_manual(values = c("Assembly" = "gray", "N50" = "gray", "N90" = "gray")) +
   theme_bw() +
   theme(

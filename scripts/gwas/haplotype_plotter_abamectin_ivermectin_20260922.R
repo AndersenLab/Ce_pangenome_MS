@@ -977,20 +977,20 @@ updated_gene_sizes <- plot_ad %>% dplyr::filter(STRAIN == "N2") %>% dplyr::selec
 plot_ad_new <- plot_ad %>% 
   dplyr::filter(!is.na(alias) & alias != "srz-13" & alias != "srz-14") %>% # For visualization purposes
   dplyr::left_join(updated_gene_sizes, by = "alias") %>%
-  dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
-  dplyr::mutate(geno = factor(geno, levels = c("REF","ALT"))) %>%
+  dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALTERNATIVE", "REFERENCE")) %>%
+  dplyr::mutate(geno = factor(geno, levels = c("REFERENCE","ALTERNATIVE"))) %>%
   dplyr::select(STRAIN, alias, start = start.x, end = end.x, new_start, new_end, geno, y_pos) 
 
 hlines_new <- plot_ad_new %>% dplyr::select(STRAIN, new_start, new_end, y_pos) %>% 
   dplyr::mutate(start = min(new_start, na.rm = TRUE), 
                 end = max(new_end, na.rm = TRUE)) %>%
   dplyr::distinct(STRAIN, start, end, y_pos) %>%
-  dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALT", "REF")) %>%
-  dplyr::mutate(geno = factor(geno, levels = c("REF","ALT")))
+  dplyr::mutate(geno = ifelse(STRAIN %in% alt_strains[alt_strains != "N2"], "ALTERNATIVE", "REFERENCE")) %>%
+  dplyr::mutate(geno = factor(geno, levels = c("REFERENCE","ALTERNATIVE")))
 
 gene_labels <- plot_ad_new %>% dplyr::mutate(middle = (new_start + new_end) / 2) %>%
   dplyr::distinct(alias, middle) %>%
-  dplyr::mutate(geno = factor("REF", levels = c("REF", "ALT")))
+  dplyr::mutate(geno = factor("REFERENCE", levels = c("REFERENCE", "ALTERNATIVE")))
 
 
 
@@ -1074,9 +1074,6 @@ og_idy_long <- msa_idy %>% tidyr::pivot_longer(-orthogroup, names_to = "strain",
 
 plot_ad_new_idy <- plot_ad_new %>% dplyr::left_join(og_idy_long, by = c("STRAIN", "alias")) %>% dplyr::mutate(identity = as.numeric(as.character(identity)))
 
-# peak_marker <- data.frame(geno = "REF", x = 5930.4, y = 50) %>%
-  # dplyr::mutate(geno = factor(geno, levels = c("REF", "ALT")))
-
 # Create the final aligned plot!
 all_hap_bg_new <- ggplot() +
   geom_segment(data = hlines_new,
@@ -1137,9 +1134,5 @@ final_labeled_plt
 
 
 # Save the plot:
-ggsave("../../figures/abamectin_haplotype.png", width = 7.5, height = 7.5, dpi = 600)
-
-
-
-
+ggsave("../../figures/abamectin_haplotype.png", final_labeled_plt, width = 7.5, height = 7.5, dpi = 600)
 

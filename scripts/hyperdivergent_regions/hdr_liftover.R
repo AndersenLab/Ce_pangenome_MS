@@ -915,23 +915,23 @@ relative_gene_set_HDR
 ###################################################################
 
 
-
-test <- hdr_nonHDR_prop_geneset %>%
+# Visualizing percentages
+percent_vis <- hdr_nonHDR_prop_geneset %>%
   dplyr::select(strain, `Gene set`, ws_class_count_inHDR, ws_class_outsideHDRs) %>%
   dplyr::group_by(strain) %>%
   dplyr::mutate(total_inHDR = sum(ws_class_count_inHDR),
                 total_outHDR = sum(ws_class_outsideHDRs)) %>%
   dplyr::mutate(percent_class_HDR = ws_class_count_inHDR / total_inHDR * 100,
-                percent_class_outHDR = ws_class_outsideHDRs / total_outHDR * 100) %>%
+                percent_class_nonHDR = ws_class_outsideHDRs / total_outHDR * 100) %>%
   dplyr::mutate(`Gene set` = factor(`Gene set`, levels = c("Core", "Accessory", "Private"))) %>%
   dplyr::ungroup()
 
-order <- test %>%
+order <- percent_vis %>%
   dplyr::arrange(desc(total_inHDR)) %>%
   dplyr::distinct(strain) %>%
   dplyr::pull(strain)
 
-inHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_HDR, fill = `Gene set`))) +
+inHDR <- ggplot(percent_vis %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_HDR, fill = `Gene set`))) +
   geom_col(alpha = 0.5, color = 'black') +
   scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
   theme(
@@ -947,7 +947,7 @@ inHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)),
   ) +
   scale_y_continuous(expand = c(0,0))
 
-ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = ws_class_count_inHDR, fill = `Gene set`))) +
+ggplot(percent_vis %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = ws_class_count_inHDR, fill = `Gene set`))) +
   geom_col() +
   scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
   theme(
@@ -961,7 +961,7 @@ ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x =
   scale_y_continuous(expand = c(0,0))
 
 
-outHDR <- ggplot(test %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_outHDR, fill = `Gene set`))) +
+outHDR <- ggplot(percent_vis %>% dplyr::mutate(strain = factor(strain, levels = order)), (aes(x = strain, y = percent_class_nonHDR, fill = `Gene set`))) +
   geom_col(alpha = 0.5, color = 'black') +
   scale_fill_manual(values = c("Core" = "green4", "Accessory" = "#DB6333", "Private" = "magenta3")) +
   scale_y_reverse(expand = c(0,0)) +
@@ -982,8 +982,6 @@ percent <- cowplot::plot_grid(
   align = "v",
   labels = c("a","b"))
 percent
-
-
 
 
 # Average proportion of WS genes in each gene set among all wild strains
