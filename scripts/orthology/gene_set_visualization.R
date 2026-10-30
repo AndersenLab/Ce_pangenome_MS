@@ -675,10 +675,10 @@ priv_summary <- priv_final %>%
 RAREFACT <- ggplot() +
   # Pangenome
   geom_errorbar(data = pan_summary, aes(x = n_strains, ymin = mean_core - sd_core, ymax = mean_core + sd_core), width = 0.5, alpha = 0.5) +
-  geom_point(data = pan_summary, aes(x = n_strains, y = mean_core, color = "Pangenome"), size = 0.3) +
+  geom_point(data = pan_summary, aes(x = n_strains, y = mean_core, color = "Pangenome"), size = 0.2) +
   # Core
   geom_errorbar(data = core_summary, aes(x = n_strains, ymin = mean_core - sd_core, ymax = mean_core + sd_core), width = 0.5, alpha = 0.5) +
-  geom_point(data = core_summary, aes(x = n_strains, y = mean_core, color = "Core"), size = 0.3) +
+  geom_point(data = core_summary, aes(x = n_strains, y = mean_core, color = "Core"), size = 0.2) +
   scale_color_manual(
     values = c("Pangenome" = "blue", "Core" = "green4"),
     limits = c("Pangenome", "Core")) +
@@ -693,7 +693,7 @@ RAREFACT <- ggplot() +
     legend.title = element_blank(),
     legend.text = element_text(size = 10, color = 'black'),
     axis.text = element_text(size = 10, color = 'black')) +
-  coord_cartesian(ylim = c(0,60000)) 
+  coord_cartesian(ylim = c(15000,60000)) 
 
 
 # Plotting all gene set rarefaction curve
@@ -765,7 +765,7 @@ n2_table <- ortho_genes_dd %>%
 
 ortho_count_wCoord <- count %>%
   dplyr::left_join(n2_table, by = "Orthogroup") %>%
-  dplyr::select(freq, class, N2) %>%
+  dplyr::select(freq, class, N2 = N2.y) %>%
   dplyr::filter(!is.na(N2)) %>%
   tidyr::separate_rows(N2, sep = ",\\s*") %>% # splitting rows so each gene is on a row and it retains is gene set classification
   dplyr::left_join(n2_gene, by = c("N2" = "tran")) %>%

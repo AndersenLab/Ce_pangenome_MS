@@ -927,7 +927,7 @@ test <- hdr_nonHDR_prop_geneset %>%
   dplyr::ungroup()
 
 order <- test %>%
-  dplyr::arrange(desc(total)) %>%
+  dplyr::arrange(desc(total_inHDR)) %>%
   dplyr::distinct(strain) %>%
   dplyr::pull(strain)
 
@@ -982,6 +982,7 @@ percent <- cowplot::plot_grid(
   align = "v",
   labels = c("a","b"))
 percent
+
 
 
 

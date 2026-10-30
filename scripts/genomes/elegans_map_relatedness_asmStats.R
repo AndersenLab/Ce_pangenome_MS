@@ -41,7 +41,7 @@ world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
 
 # Plotting where isotype strains have been collected and which ones were selected for sequencing
 MAP <- ggplot() +
-  geom_sf(data = world, fill = "white", color = "gray30", linewidth = 0.2) +
+  geom_sf(data = world, fill = "white", color = "gray40", linewidth = 0.2) +
   geom_point(data = geo, aes(x = long, y = lat, color = hifi_sequence), size = 1) +
   scale_color_manual(values = c("Yes" = "red", "No" = "darkblue")) +
   coord_sf(expand = FALSE) +
@@ -55,7 +55,6 @@ MAP <- ggplot() +
     axis.text = element_blank(),
     panel.grid = element_blank()) +
   guides(color = guide_legend(override.aes = list(size = 3)))
-MAP
 
 
 ####################################################################################################
@@ -198,7 +197,7 @@ av_gasm <- plot_df %>% dplyr::filter(metric == "Assembly") %>% dplyr::summarize(
 top <- ggplot(plot_df, aes(x = metric, y = value)) +
   geom_point(position = position_jitter(width = 0.25), size = 0.3, color = 'black') +
   geom_boxplot(aes(fill = metric),  outlier.shape = NA, alpha = 0.5, fatten = 2) +
-  scale_fill_manual(values = c("Assembly" = "blue", "N50" = "green", "N90" = "orange")) +
+  scale_fill_manual(values = c("Assembly" = "gray", "N50" = "gray", "N90" = "gray")) +
   theme_bw() +
   theme(
     axis.title.x = element_blank(),
