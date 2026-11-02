@@ -794,11 +794,12 @@ sv_overlap_ipr <- sv_overlap_genes %>% dplyr::left_join(n2_ipr_clean, by = c('se
   dplyr::mutate(ipr_gene_count = n()) %>%
   dplyr::ungroup() %>%
   dplyr::distinct(IPR_description, ipr_gene_count) %>%
-  # dplyr::group_by(sv_type) %>%
-  dplyr::mutate(total_genes = sum(ipr_gene_count)) %>%
-  dplyr::mutate(prop_ipr_gene_count = (ipr_gene_count / total_genes) * 100) #%>%
-  # dplyr::ungroup()
+  # dplyr::mutate(total_genes = sum(ipr_gene_count)) %>%
+  # dplyr::mutate(prop_ipr_gene_count = (ipr_gene_count / total_genes) * 100) %>%
+  dplyr::arrange(desc(ipr_gene_count)) %>%
+  dplyr::rename(`IPR description` = IPR_description, `Gene count` = ipr_gene_count)
 
+write.table(sv_overlap_ipr, "../../tables/IPR_genes_overlapSVs.tsv", quote = F, row.names = F, col.names = T, sep = '\t')
 
 
 

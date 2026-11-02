@@ -475,7 +475,6 @@ write.table(diff, "../../tables/enriched_IPR_inHDRs.tsv", row.names = F, col.nam
 
 
 ### Make figure 4:
-## Relative fraction of HDR genes in each gene set
 hdr_nonHDR_prop_geneset <- readr::read_tsv("../../processed_data/hdr_liftover/HDR_nonHDR_relativeFract_geneset.tsv") 
 
 # Box plots:
@@ -516,7 +515,7 @@ box_plot_count <- ggplot(percent_box_vis, aes(x = region, y = ws_class_count, fi
     axis.title.y = element_text(size = 11, color = 'black')
   ) +
   labs(x = NULL, y = "Number of genes") 
-box_plot_count
+# box_plot_count
 
 
 # Looking at what percentage of WS genes contribute to each gene setx
@@ -539,6 +538,20 @@ box_plot_perc <- ggplot(percent_box_vis, aes(x = gene_region, y = percent_class,
   coord_cartesian(ylim = c(0,100))
 # box_plot_perc
 
+wilcox_stats <- percent_box_vis %>%
+  dplyr::group_by(gene_set) %>%
+  rstatix::wilcox_test(percent_class ~ region, paired = TRUE) %>%
+  rstatix::adjust_pvalue(method = "BH") %>%
+  rstatix::add_significance("p.adj") 
+
+wilcox_stats$xmin <- c(1, 3, 5)      
+wilcox_stats$xmax <- c(2, 4, 6)      
+wilcox_stats$y.position <- c(75, 95, 5)
+
+box_plot_perc <- box_plot_perc +
+  ggpubr::stat_pvalue_manual(wilcox_stats, label = "p.adj.signif", size = 4, vjust = 0.1, tip.length = 0.01)
+box_plot_perc
+
 hdr_ws_genes_stats_plt <- cowplot::plot_grid(
   box_plot_count, box_plot_perc,
   nrow = 1,
@@ -546,7 +559,6 @@ hdr_ws_genes_stats_plt <- cowplot::plot_grid(
   align = "h",
   labels = c("a","b"))
 # hdr_ws_genes_stats_plt
-
 
 # Cowplot with enrichment results
 final_prop_enriched <- cowplot::plot_grid(
