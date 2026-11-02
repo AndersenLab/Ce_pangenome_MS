@@ -29,7 +29,7 @@ glc_cov <- glc_orthos %>% dplyr::left_join(cov, by = c("strain","gene")) %>% dpl
 
 alt_strains <- c("WN2001","NIC199","MY23","MY16","JU2526","CX11314","JU775","MY10","JU258","CX11264","NIC195","CB4856","JU782", "EG4725", "DL238", "ECA36")
 
-pheno_strains <- readr::read_tsv("../..//processed_data/gwas/strains.tsv", col_names = "strain") %>%
+pheno_strains <- readr::read_tsv("../../processed_data/gwas/strains.tsv", col_names = "strain") %>%
   dplyr::mutate(geno = ifelse(strain %in% alt_strains, "ALT", "REF")) 
 
 pheno_strains_vec <- pheno_strains %>% dplyr::pull(strain)
