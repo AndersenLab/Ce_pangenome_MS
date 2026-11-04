@@ -5,7 +5,6 @@ library(readr)
 library(stringr)
 library(ape)
 
-
 # CE and HC orthogroups
 orthos <- readr::read_tsv("../../processed_data/orthology/orthofinder/proteomes_HC_CE/OrthoFinder/Results_Nov03/Orthogroups/Orthogroups.tsv")
 
