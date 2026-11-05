@@ -83,7 +83,9 @@ ogs_restricted_interval <- ogs %>% dplyr::filter(N2_gene %in% restricted_n2_gene
   dplyr::mutate(HC = gsub("transcript_","", HC),
                 HC = sub("-.*", "", HC)) %>%
   dplyr::left_join(hc_tran_gene, by = c("HC" = "gene")) %>%
-  dplyr::select(Orthogroup, N2_gene, HC, chrom, start, end, region_doyle, region_mcintyre)
+  dplyr::select(Orthogroup, N2_gene, `H_contortus (HC)` = HC, HC_chrom = chrom, HC_gene_start = start, HC_gene_end = end, region_doyle, region_mcintyre)
+
+write.table(ogs_restricted_interval, "../../tables/CE_HC_orthology.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
 
 # Looking at the full N2 QTL
 n2_qtl_genes <- n2_gene_info %>% dplyr::filter(region == "QTL") %>% dplyr::pull(alias)
