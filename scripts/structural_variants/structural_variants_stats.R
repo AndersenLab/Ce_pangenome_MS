@@ -1144,7 +1144,7 @@ pca_df <- pca_df %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
 geo.colors <- c("Big Island"="black", "Molokai" = "#66C2A5", "Maui" = "yellow", "Oahu" = "brown", "Kauai" = "purple", "Africa"="green", "North America" = "pink", "Europe" = "#E41A1C", "Atlantic" = "blue",
-                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
+                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333", "South America" = "magenta")
 
 pca_df <- pca_df %>%
   mutate(label = ifelse(PC2 > 50, strain, NA))

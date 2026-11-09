@@ -788,11 +788,23 @@ prop_genes_in_hdrs <- ws_genes_hdrs_stats %>%
   dplyr::arrange(desc(prop_total_ws_genes_inHDRs)) %>%
   dplyr::mutate(strain = factor(strain, levels = strain))
 
+
+geo <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv") %>% dplyr::select(strain = isotype, geo) %>% dplyr::mutate(geo = ifelse(geo == "Hawaii", "Hawai'i", geo))
+geo.colors <- c("Hawai'i" = "orange",
+                "Africa" = "green", 
+                "South America" = "magenta",
+                "North America" = "pink", 
+                "Europe" = "#E41A1C", 
+                "Atlantic" = "blue",
+                "Oceania" ="cyan", 
+                "unknown" = 'gray')
+
 # Plotting stats of WS genes in HDRs 
-prop_size_genes_inHDRs <- ggplot(data = prop_genes_in_hdrs) + 
-  geom_col(aes(x = strain, y = prop_total_ws_genes_inHDRs * 100), fill = 'gray60', color = 'black') +
+prop_size_genes_inHDRs <- ggplot(data = prop_genes_in_hdrs %>% dplyr::left_join(geo, by = "strain")) + 
+  geom_col(aes(x = strain, y = prop_total_ws_genes_inHDRs * 100, fill = geo), color = 'black') +
   geom_point(data = span_ws_hdrs, aes(x = strain, y = (span_hdrs / 1e6)), color = "black", size = 1) +
   geom_line( data = span_ws_hdrs, aes(x = strain, y = (span_hdrs / 1e6) , group = 1), color = "black", linewidth = 0.5) +
+  scale_fill_manual(values = geo.colors) +
   theme(
     axis.title.x = element_blank(),
     panel.border = element_rect(color = 'black', fill = NA),
@@ -800,13 +812,17 @@ prop_size_genes_inHDRs <- ggplot(data = prop_genes_in_hdrs) +
     axis.text.x = element_text(size = 3.5, color= 'black', angle = 60, hjust = 1),
     axis.title.y = element_text(size = 10, color = 'black'),
     axis.text.y = element_text(size = 10, color = 'black'),
+    legend.position = "inside",
+    legend.position.inside = c(0.7,0.65),
+    legend.title = element_text(size = 9, color = 'black'),
+    legend.text = element_text(size = 9, color = 'black'),
     plot.margin = margin(t = 8, b = 5, l = 5, r = 5)) +
-  labs(y = "Percentage of wild strain genes in HDRs (%)") +
+  labs(y = "Percentage of wild strain genes in HDRs (%)", fill = "Collection location") +
   scale_y_continuous(name = "Percentage of wild strain genes in HDRs (%)", 
                      sec.axis = sec_axis(~. / 1 ,name = "Total wild strain HDRs span (Mb)"), expand = expansion(mult = c(0, .05))) 
 prop_size_genes_inHDRs
 
-# ggsave("../../figures/supplementary/prop_size_genes_inHDRs.png", prop_size_genes_inHDRs, width = 7.5, height = 4, dpi = 600)
+ggsave("../../figures/supplementary/prop_size_genes_inHDRs.png", prop_size_genes_inHDRs, width = 7.5, height = 4, dpi = 600)
 
 
 # Proportions inside and outside HDRs in an admixture-like display:

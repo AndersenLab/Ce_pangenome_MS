@@ -119,7 +119,7 @@ pca_df <- pca_df %>%
   dplyr::mutate(geo = ifelse(strain == "CGC1", "CGC1",geo)) 
 
 geo.colors <- c("Big Island"="black", "Moloka'i" = "#66C2A5", "Mau'i" = "yellow", "O'ahu" = "brown", "Kaua'i" = "purple", "Africa"="green", "North America" = "pink", "Europe" = "#E41A1C", "Atlantic" = "blue", 
-                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333")
+                "Oceania" ="cyan", "unknown" = 'gray', "CGC1" = "#DB6333", "South America" = "magenta")
 
 pca_df <- pca_df %>%
   dplyr::mutate(label = ifelse(PC2 > 50, strain, NA)) %>%
@@ -136,13 +136,14 @@ PCA <- ggplot(pca_df, aes(PC1, PC2, color = geo)) +
   theme(
     axis.text = element_text(size = 10, color = 'black'),
     axis.title = element_text(size = 11, color = 'black'),
-    legend.text = element_text(size = 9, color = 'black'),
+    # legend.text = element_text(size = 7, color = 'black'),
     legend.title = element_text(size = 9, color = 'black'),
-    legend.key.width = unit(0.39, "cm"),
+    legend.key.width = unit(0.34, "cm"),
+    legend.text = element_text(size = 7, color = 'black', margin = margin(l = 0, unit = "pt")),
     legend.position = 'top') +
   labs(color = "Collection\nlocation", x = paste0("PC1 (", round(100 * summary(sv_pca)$importance[2,1], 1), "%)"), y = paste0("PC2 (", round(100 * summary(sv_pca)$importance[2,2], 1), "%)"))+
-  guides(color = guide_legend(override.aes = list(size = 2), keyheight = unit(0.2, "cm"))) 
-PCA
+  guides(color = guide_legend(override.aes = list(size = 1.5), keyheight = unit(0.2, "cm"))) 
+# PCA
 
 
 # Create final plot
