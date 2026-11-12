@@ -203,9 +203,9 @@ OG_prop <- OG_classes %>%
   dplyr::count(class, name = "class_count") %>%
   dplyr::mutate(prop = class_count / sum(class_count) * 100) %>%
   dplyr::mutate(class = factor(class, levels = c("accessory", "private"))) %>%
-  dplyr::mutate(source = "N2BRAKER_")
+  dplyr::mutate(source = "N2 BRAKER\northogroups")
 
-both <- OG_prop %>% dplyr::bind_rows(OG_propN2) %>% dplyr::mutate(source = factor(source, levels = c("N2BRAKER_", "N2")))
+both <- OG_prop %>% dplyr::bind_rows(OG_propN2 %>% dplyr::mutate(source = "N2\northogroups")) %>% dplyr::mutate(source = factor(source, levels = c("N2 BRAKER\northogroups", "N2\northogroups")))
 
 both_prop <- ggplot(both, aes(x = prop, y = source, fill = class)) +
   geom_col(position = "stack", width = 0.5, color = "black") +
@@ -218,7 +218,7 @@ both_prop <- ggplot(both, aes(x = prop, y = source, fill = class)) +
     axis.title.x = element_text(size = 9, color = 'black'),
     axis.ticks.y = element_blank(),
     axis.title.y = element_text(size = 10, color = 'black'),
-    axis.text.y = element_text(size = 9, color = 'black'),
+    axis.text.y = element_text(size = 8, color = 'black'),
     axis.text.x = element_text(size = 9, color = 'black'))
 both_prop
 

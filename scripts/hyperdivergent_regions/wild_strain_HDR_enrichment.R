@@ -279,7 +279,7 @@ priv_HDR_enrich <- ggplot(data_plt_priv_plt) +
   guides(
     fill = guide_colourbar(nrow=1, order = 1, title.position = "top", force = TRUE, barwidth = 5, barheight = 1),
     size = guide_legend(nrow=1, order = 2, title.position = "top", title.hjust = 1, force = TRUE),
-    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 0.5))) +
+    shape = guide_legend(nrow = 3, order = 3, title.position = "top", title.hjust = 1, override.aes = list(size = 3))) +
   labs(title = "Enriched IPR terms for wild strain genes in HDRs",  x = "Gene count", size = "Fold enrichment", fill = expression(-log[10]~"(corrected p-value)"))
 priv_HDR_enrich
 
@@ -575,7 +575,7 @@ ggsave("../../figures/wild_strain_HDRs_gene_set_enrichment.png", final_prop_enri
 ##########################################################################################
 ### Look at rarefaction of enriched gene families ###
 ##########################################################################################
-pan_ipr_cleaned <-readr::read_tsv("../../processed_data/genome_resources/annotation/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>% 
+pan_ipr_cleaned <-readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>% 
   tidyr::separate(tran, into = c("strain","gene"), sep = "_") %>% 
   dplyr::filter(IPR_description != "-") %>% 
   dplyr::select(strain,gene,IPR_description)
@@ -774,5 +774,5 @@ rarefaction_gene_families <- ggplot() +
 rarefaction_gene_families
 
 # Save rarefaction plot
-# ggsave("../../figures/supplementary/gene_family_rarefaction.png",rarefaction_gene_families, width = 7.5, height = 6, dpi = 600)
+ggsave("../../figures/supplementary/gene_family_rarefaction.png",rarefaction_gene_families, width = 7.5, height = 6, dpi = 600)
 

@@ -817,8 +817,8 @@ prop_size_genes_inHDRs <- ggplot(data = prop_genes_in_hdrs %>% dplyr::left_join(
     legend.title = element_text(size = 9, color = 'black'),
     legend.text = element_text(size = 9, color = 'black'),
     plot.margin = margin(t = 8, b = 5, l = 5, r = 5)) +
-  labs(y = "Percentage of wild strain genes in HDRs (%)", fill = "Collection location") +
-  scale_y_continuous(name = "Percentage of wild strain genes in HDRs (%)", 
+  labs(y = "Percent of wild strain genes in HDRs (%)", fill = "Collection location") +
+  scale_y_continuous(name = "Percent of wild strain genes in HDRs (%)", 
                      sec.axis = sec_axis(~. / 1 ,name = "Total wild strain HDRs span (Mb)"), expand = expansion(mult = c(0, .05))) 
 prop_size_genes_inHDRs
 

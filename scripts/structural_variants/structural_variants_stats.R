@@ -79,7 +79,7 @@ prop <- summary %>%
 prop_plt <- ggplot() +
   geom_bar(data = prop, aes(x = strain, y = prop, fill = sv_type), stat = "identity") +
   scale_fill_manual(values = c("INS" = "blue", "DEL" = "red", "INV" = "gold")) +
-  labs(y = "Percentage of SVs (%)", fill = "SV type") +
+  labs(y = "Percent of SVs (%)", fill = "SV type") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),
@@ -683,7 +683,7 @@ sv_gene_overlap <- ggplot() +
   geom_bar(data = plt_stats, aes(x = sv_type, y = prop, fill = region), stat = "identity") +
   geom_text(data = plt_stats, aes(x = sv_type, y = prop, label = region_count, group = region), position = position_stack(vjust = 0.5), color = "white", size = 4) +
   scale_fill_manual(values = c("overlaps_PCgene" = "red", "non-PC_region" = "gray60")) +
-  labs(y = "Percentage of N2 genes (%)", fill = "Region") +
+  labs(y = "Percent of N2 reference genes (%)", fill = "Region") +
   theme(panel.border = element_rect(color = 'black', fill = NA),
         panel.background = element_blank(),
         panel.grid.major= element_line(color = 'gray80'),

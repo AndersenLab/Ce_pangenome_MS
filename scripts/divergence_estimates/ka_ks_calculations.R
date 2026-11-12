@@ -154,7 +154,7 @@ annotation_df <- stats_final %>%
 # Difference in Ks, Ka, and Ka / Ks between SC OGs in HDRs and not in HDRs?
 kaks_all_sc_ogs <- ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_inHDR >= 10), aes(x = stats, y = values, fill = inHDR)) +
   geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outliers = FALSE, alpha = 0.5) +
-  geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.7), size = 0.5, alpha = 0.5) +
+  geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.7), size = 0.5, alpha = 0.3) +
   geom_text(data = annotation_df, aes(x = stats, y = y_pos, label = label), inherit.aes = FALSE, size = 5) +
   # geom_hline(yintercept = 1, linetype = "dashed") +
   scale_fill_manual(values = c("non-HDR" = "blue", "HDR" = "RED")) +
@@ -169,11 +169,16 @@ kaks_all_sc_ogs <- ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_in
     legend.text = element_text(size = 10, color = 'black'),
     panel.background = element_blank()
   ) +
-  labs(x = NULL, y = expression("Mean pairwise value (log"[10]*")"), fill = NULL)
+  labs(x = NULL, y = expression("log"[10]*"(Mean pairwise value)"), fill = NULL)
 # kaks_all_sc_ogs
 
 # Save the plot
 # ggsave("../../figures/supplementary/KaKs_all_singleCopy_OGs.png", kaks_all_sc_ogs, width = 7.5, height = 6, dpi = 600)
+write.table(kaks_plt, "/vast/eande106/projects/Lance/THESIS_WORK/misc/kaks.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
+
+
+
+
 
 # Does sequence divergence (Ks) and non-synonymous rate (Ka) scale with frequence SC OG is found in a HDR?
 ggplot(kaks_plt %>% dplyr::filter(stats == "Ks",

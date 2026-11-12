@@ -17,7 +17,7 @@ mapping_id_col <- "strain"
 independent_tests <- 9462.00000000002
 LOCO_gwa_file <- "../../tables/abamectin_q90.TOF_ctrl-regressed_loco.gwa"
 hdrs <- readr::read_tsv("../../data/genomic_resources/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom", "start", "end", "strain"))
-glc1 <- data.frame(CHR = "V", xmin = (16219634 / 1e6) - 0.02, xmax = (16221917 / 1e6) + 0.02)
+arrow_df <- data.frame(CHR = "V", x = mean(c(16219634, 16221917)) / 1e6, y_start = 8.5, y_end = 8.05) # adding an arrow of where glc-1 is
 strains_phenotyped <- readr::read_tsv("../../tables/mapping_2018GWAS_MLs.tsv") %>% dplyr::pull(strain)
 
 # ============================================================
@@ -268,16 +268,20 @@ plot_manhattan <- function(gwa, bf_threshold) {
     dplyr::mutate(bf = bf_threshold)
 
   ggplot(df) +
-    geom_rect(data = all_collapsed, aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 8), fill = 'black', alpha = 0.2) +
-    geom_rect(data = glc1, aes(xmin = xmin, xmax = xmax, ymin = 0, ymax = 8), fill = 'purple') +
+    geom_rect(data = all_collapsed, aes(xmin = start / 1e6, xmax = end / 1e6, ymin = 0, ymax = 8), fill = "black", alpha = 0.2) +
+    geom_segment(data = arrow_df,
+                 aes(x = x, xend = x, y = y_start, yend = y_end),
+                 arrow = arrow(length = unit(0.15, "cm"), type = "closed"),
+                 colour = "purple", linewidth = 0.6, inherit.aes = FALSE) +
     geom_point(aes(x = POS / 1e6, y = neglogp, colour = sig, alpha = sig), size = 0.6) +
     scale_colour_manual(values = sig.colors) +
     scale_alpha_manual(values = sig.alpha) +
     geom_hline(data = line_df, aes(yintercept = bf), linetype = 1) +
     facet_grid(. ~ CHR, scales = "free_x", space = "free_x", drop = FALSE) +
     labs(x = "N2 genomic position (Mb)", y = expression(-log[10](italic(p)))) +
-    scale_y_continuous(expand = c(0,0)) +
-    # scale_x_continuous(expand = c(0,0)) +
+    scale_y_continuous(expand = c(0, 0), limits = c(0, 8), breaks = seq(0, 8, 2),
+                       oob = scales::oob_keep) +
+    coord_cartesian(clip = "off") +
     theme_bw(base_size = 10) +
     theme(
       panel.grid = element_blank(),
