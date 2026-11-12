@@ -195,6 +195,7 @@ pie_gene_set <- ggdraw(pie_base) +
 pie_gene_set
 
 
+
 HIST <- ggdraw() +
   draw_plot(geneset_hist) +
   draw_plot(pie_gene_set, 
@@ -202,7 +203,6 @@ HIST <- ggdraw() +
             y = 0.4,      # vertical position (0-1)
             width = 0.5,  # width of inset (0-1)
             height = 0.5)  # height of inset (0-1)
-
 
 #### Visualization of how many genes contribute to each gene set for every strain
 table <- all_relations %>%
