@@ -11,12 +11,12 @@ F11A5.5	V	16200380	A	T	14	missense	262Y>262F	3	22	IPR052501, IPR002516	Alpha-1-2
 glc-1	V	16220183	G	A	14	missense	68A>64T, 68A>66T, 68A>68T	0	58	IPR006201, IPR006202, IPR036734	Neurotransmitter-gated ion-channel, Neurotransmitter-gated ion-channel ligand-binding domain, Neurotransmitter-gated ion-channel ligand-binding domain superfamily
 glc-1	V	16220469	C	T	14	missense	163T>159M, 163T>162M, 163T>163M	-1	81	IPR006201, IPR006202, IPR036734	Neurotransmitter-gated ion-channel, Neurotransmitter-gated ion-channel ligand-binding domain, Neurotransmitter-gated ion-channel ligand-binding domain superfamily
 glc-1	V	16221378	T	C	14	missense	367V>363A, 367V>367A	0	64	IPR006201, IPR044721, IPR036719, IPR006029, IPR038050	Neurotransmitter-gated ion-channel, Glutamate gated chloride channel, transmembrane domain, Neurotransmitter-gated ion-channel transmembrane domain superfamily, Neurotransmitter-gated ion-channel transmembrane domain, Neuronal acetylcholine receptor
-srh-279	NA	NA	NA	NA	5	NA	NA	NA	NA	NA	NA
-F11A5.3	NA	NA	NA	NA	4	NA	NA	NA	NA	NA	NA
+srh-279	V	NA	NA	NA	5	NA	NA	NA	NA	NA	NA
+F11A5.3	V	NA	NA	NA	4	NA	NA	NA	NA	NA	NA
 F11A5.17	V	16202055	A	T	4	missense	4I>4F	0	21	NA	NA
 F11A5.17	V	16202423	C	A	4	missense	109T>109N	0	65	NA	NA
-F11A5.4	NA	NA	NA	NA	3	NA	NA	NA	NA	NA	NA
-F11A5.9	NA	NA	NA	NA	1	NA	NA	NA	NA	NA	NA
+F11A5.4	V	NA	NA	NA	3	NA	NA	NA	NA	NA	NA
+F11A5.9	V	NA	NA	NA	1	NA	NA	NA	NA	NA	NA
 F11A5.18	V	16204436	A	G	ECA36	missense	5N>5D	1	23	NA	NA
 F11A5.18	V	16204452	A	G	ECA36	missense	10K>10R	2	26	NA	NA
 F11A5.18	V	16204475	G	C	ECA36	missense	18G>18R	-2	125	NA	NA
@@ -101,3 +101,5 @@ oac-15	V	16209344	C	T	ECA36	missense	61G>61D	-1	94	IPR050879, IPR002656	Acyltran
 oac-15	V	16209381	C	T	ECA36	missense	49A>49T	0	58	IPR050879, IPR002656	Acyltransferase 3, Acyltransferase 3 domain
 oac-15	V	16209401	T	A	ECA36	missense	42Y>42F	3	22	IPR050879, IPR002656	Acyltransferase 3, Acyltransferase 3 domain
 oac-15	V	16209864	A	C	ECA36	missense	14F>14V	-1	50	IPR050879, IPR002656	Acyltransferase 3, Acyltransferase 3 domain
+avr-15	V	NA	NA	NA	0	NA	NA	NA	NA	NA	NA
+avr-14	I	NA	NA	NA	0	NA	NA	NA	NA	NA	NA

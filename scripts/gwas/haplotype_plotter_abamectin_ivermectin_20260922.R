@@ -1084,7 +1084,7 @@ all_hap_bg_new <- ggplot() +
   scale_y_continuous(expand = c(0.01, 0), breaks = hlines$y_pos, labels = hlines$STRAIN) +
   scale_x_continuous(expand = c(0.01, 0),labels = function(x) x / 1000) +
   # geom_text(data = peak_marker, aes(x = x, y = y), label = "*", size = 5, color = "black") +
-  geom_vline(xintercept = 5930.4, linetype = "dashed", color= 'black') +
+  geom_vline(xintercept = 5900, linetype = "dashed", color= 'black', size = 1.3) + # calibrated position 5930.4
   scale_fill_gradientn(colors = c("yellow", "orange", "red", "blue")) +
   labs(fill="Percent\nidentity (%)") +
   ggh4x::facet_grid2(geno ~ ., scales = "free_y", space = "free_y", switch = "y",

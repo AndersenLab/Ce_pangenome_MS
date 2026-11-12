@@ -247,7 +247,7 @@ f11a59_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation
   dplyr::filter(alt_specific == TRUE) 
 
 
-glc_1_variants_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/CSQ_glc-1.csv") %>%
+glc_1_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/CSQ_glc-1.csv") %>%
   dplyr::select(-id, -target_consequence, -gene_id) %>%
   dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
   tidyr::separate_rows(strains, sep = " ") %>%
@@ -257,8 +257,6 @@ glc_1_variants_variants <- readr::read_csv("../../processed_data/gwas/variant_an
   dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
   dplyr::filter(alt_specific == TRUE) %>%
   dplyr::filter(blosum <= 0)
-  
-
 
 f11_18_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/CSQ_F11A5.18.csv") %>%
   dplyr::select(-id, -target_consequence, -gene_id, -dna_change, -transcript) %>%
@@ -308,10 +306,35 @@ oac15_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/
   dplyr::filter(!grepl("utr",consequence))
   # dplyr::filter(blosum < 0)
 
+
+avr14_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/CSQ_avr14.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% alt_strains) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  dplyr::filter(alt_specific == TRUE)
+
+avr15_variants <- readr::read_csv("../../processed_data/gwas/variant_annotation/CSQ_avr15.csv") %>%
+  dplyr::select(-id, -target_consequence, -gene_id) %>%
+  dplyr::filter(!is.na(consequence) & consequence != "intron" & consequence != "synonymous") %>%
+  tidyr::separate_rows(strains, sep = " ") %>%
+  dplyr::filter(strains %in% alt_strains) %>%
+  dplyr::group_by(chrom, pos, ref_seq, alt_seq, consequence) %>%
+  dplyr::summarise(dplyr::across(dplyr::everything(), ~ paste(unique(.x), collapse = ", ")), .groups = "drop") %>%
+  dplyr::left_join(alt_specific, by = c("pos" = "POS")) %>% 
+  dplyr::filter(alt_specific == TRUE)
+
+
+# Concatenating together information from all genes in QTL with shared SNVs and avr-14/15
 resistant_snvs_per_gene <- snvs_per_gene %>% dplyr::mutate(n_snvs = as.character(n_snvs)) %>% 
   dplyr::add_row(alias = "F11A5.18", n_snvs = "ECA36") %>%
   dplyr::add_row(alias = "irld-26", n_snvs = "ECA36") %>%
   dplyr::add_row(alias = "oac-15", n_snvs = "ECA36") %>%
+  dplyr::add_row(alias = "avr-15", n_snvs = "0") %>%
+  dplyr::add_row(alias = "avr-14", n_snvs = "0") %>%
   dplyr::select(Gene = alias, "Number of SNVs specific to resistant strains" = n_snvs) %>% 
   dplyr::left_join(glc_1_variants %>% dplyr::select(gene, Chromosome = chrom, Position = pos, REF = ref_seq, ALT = alt_seq, consequence, amino_acid_change, blosum, grantham), by = c("Gene" = "gene")) %>%
   # dplyr::mutate(amino_acid_change = ifelse(amino_acid_change == "68A>64T, 68A>66T, 68A>68T", "A68T", 
@@ -370,7 +393,9 @@ resistant_snvs_per_gene <- snvs_per_gene %>% dplyr::mutate(n_snvs = as.character
                 REF = coalesce(REF.x, REF.y),
                 ALT = coalesce(ALT.x, ALT.y),
                 BLOSUM62 = coalesce(BLOSUM62, blosum),
-                Grantham = coalesce(Grantham, grantham)) %>% dplyr::select(Gene, Chromosome, Position, REF, ALT, `Number of SNVs specific to resistant strains`, consequence, amino_acid_change, BLOSUM62, Grantham) 
+                Grantham = coalesce(Grantham, grantham)) %>% dplyr::select(Gene, Chromosome, Position, REF, ALT, `Number of SNVs specific to resistant strains`, consequence, amino_acid_change, BLOSUM62, Grantham) %>%
+  dplyr::mutate(Chromosome = ifelse(Gene == "avr-14", "I", 
+                                    ifelse(is.na(Chromosome), "V", Chromosome)))
   
 # ADDING DOMAIN ANNTOATIONS
 glc_1_domains <- readr::read_tsv("../../processed_data/gwas/variant_annotation/N2_GLC-1_IPR_annotations.tsv", col_names = c("tran","start","end","IPR_acc","IPR_description")) %>%
