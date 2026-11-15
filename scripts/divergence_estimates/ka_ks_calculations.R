@@ -117,17 +117,17 @@ final_kaks_df <- dplyr::bind_rows(final_kaks_list) %>%
                                                             count_inHDR = ifelse(is.na(count_inHDR), 0, count_inHDR))
 
 # How many of the 12,315 SC OGs passed QC for Ka and Ks calculations?
-print(length(unique(final_kaks_df$OG))) # 11,631
-stats <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::group_by(inHDR) %>% dplyr::summarize(number_of_OGs = n()) # 2,124 in HDRs and 9,507 outside HDRs
+print(length(unique(final_kaks_df$OG))) # 11,562
+stats <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::group_by(inHDR) %>% dplyr::summarize(number_of_OGs = n()) # 82 in HDRs and 11,480 outside HDRs
 
 filt_ogs <- final_kaks_df %>% dplyr::distinct(OG) %>% dplyr::rename(Orthogroup = OG)
 filt_hdr_ogs <- final_kaks_df %>% dplyr::distinct(OG, inHDR) %>% dplyr::filter(inHDR == "HDR") %>% dplyr::select(Orthogroup = OG, -inHDR)
-# write.table(filt_ogs, "../../processed_data/divergence_estimates/filtered_sc_OGs.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
-# write.table(filt_hdr_ogs, "../../processed_data/divergence_estimates/filtered_sc_OGs_inHDRs.tsv", quote = F, row.names = F, col.names = T, sep = "\t")
 
 kaks_plt <- final_kaks_df %>% dplyr::filter(values > 0) %>% dplyr::mutate(stats = ifelse(stats == "mean_pairwise_ks", "Ks",
                                                                                          ifelse(stats == "mean_pairwise_ka", "Ka", "Ka / Ks"))) %>%
-  dplyr::mutate(stats = factor(stats, levels = c("Ks", "Ka", "Ka / Ks")))
+  dplyr::mutate(stats = factor(stats, levels = c("Ka", "Ks", "Ka / Ks"))) %>%
+  dplyr::mutate(in_HDR = ifelse(count_inHDR >= 71, "HDR", "nonHDR"))
+
 
 # Wilcoxon tests for each statistic
 wilcox_results <- kaks_plt %>%
@@ -152,7 +152,7 @@ annotation_df <- stats_final %>%
     TRUE ~ "ns"), y_pos = 6)
 
 # Difference in Ks, Ka, and Ka / Ks between SC OGs in HDRs and not in HDRs?
-kaks_all_sc_ogs <- ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_inHDR >= 10), aes(x = stats, y = values, fill = inHDR)) +
+kaks_all_sc_ogs <- ggplot(kaks_plt, aes(x = stats, y = values, fill = inHDR)) +
   geom_boxplot(outlier.size = 0.6, width = 0.7, position = position_dodge(width = 0.75), outliers = FALSE, alpha = 0.5) +
   geom_point(position = position_jitterdodge(jitter.width = 0.25, dodge.width = 0.7), size = 0.5, alpha = 0.3) +
   geom_text(data = annotation_df, aes(x = stats, y = y_pos, label = label), inherit.aes = FALSE, size = 5) +
@@ -173,8 +173,12 @@ kaks_all_sc_ogs <- ggplot(kaks_plt %>% dplyr::filter(count_inHDR == 0 | count_in
 # kaks_all_sc_ogs
 
 # Save the plot
-# ggsave("../../figures/supplementary/KaKs_all_singleCopy_OGs.png", kaks_all_sc_ogs, width = 7.5, height = 6, dpi = 600)
-write.table(kaks_plt, "/vast/eande106/projects/Lance/THESIS_WORK/misc/kaks.tsv", col.names = T, row.names = F, quote = F, sep = "\t")
+ggsave("../../figures/supplementary/KaKs_all_singleCopy_OGs.png", kaks_all_sc_ogs, width = 7.5, height = 6, dpi = 600)
+
+
+
+
+
 
 
 
