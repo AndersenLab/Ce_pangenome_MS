@@ -69,7 +69,7 @@ Supplementary figures:
 		- Supplementary Figure 23
 	- `cnv_pav_allGenes.png`
 		- Supplementary Figure 24
-        - `cnv_pav_N2_allGenes.png`
+	- `cnv_pav_N2_allGenes.png`
 		- Supplementary Figure 25
 	- `gene_family_OG_stats.png`
 		- Supplementary Figure 26
