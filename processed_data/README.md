@@ -21,8 +21,6 @@ processed_data/
 │   ├── isotypes
 │   └── trees
 ├── gwas
-│   ├── dump
-│   ├── haemonchus_contortus_orthology
 │   ├── rna_aln
 │   │   ├── coverage
 │   └── variant_annotation
@@ -121,9 +119,29 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 This directory contains data pertaining to the genome-wide association study of resistance to the anthelmintic drug abamectin.
 
 ### Contains
-- ``
-	- 
-
+- `OG00*`
+	- Protein MSA of orthogroups that contain N2 reference genes in the abamectin QTL (peak marker +- 22 kb). These files are used to calculate the percent IDY of wild strain orthologs.
+- `F11A5.5_orthos.tsv`
+	- A list of orthologous genes among wild strains with the N2 reference gene F11A5.5.
+- `glc1_orthos.tsv`
+	- A list of orthologous genes among wild strains with the N2 reference gene glc-1.
+- `interval_orthogroups.tsv`
+	- The list of orthogroups contain in the abamectin QTL.
+- `n2_genes_inInterval.txt`
+	- The list of N2 reference genes contained in the abamectin QTL.
+- `SNVs_in_Interval.tsv`
+	- SNVs found in the abamectin QTL.
+- `strains.tsv`
+	- The list of abamectin phenotyped strains for which we have a genome assembly.
+- `zhang_2022_NatureComm_SuppData1.csv`
+	- Gene expression data from Zhang *et al.*, Nature communications 2022.
+- `rna_aln/`
+	- `*.bam`
+		- Alignments files of RNA seq to respective genomes.
+	- `coverage/`
+		- `ALL_strains_cov.txt` - Large file. Publicly available on AWS.
+			- Mean RNA coverage for exomes of wild strains and N2.
+	
 ## hdr_liftover/
 
 This directory contains wild strain HDR liftover coordinates and related statistics and meta data.
