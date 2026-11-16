@@ -4,59 +4,38 @@ This directory contains the processed datasets used for downstream genomic analy
 
 ## Directory Structure
 
-processed_data/
-- divergence_estimates/
-	- codon_alignments/
-- genome_resources/  
-	- annotation/
-		- gffs/
-	- genome_data/
-		- genomes/
-	- isotypes/
-	- trees/
-- gwas/
-	- haemonchus_contortus_orthology/
-	- rna_aln/
-		- coverage/
-	- variant_annotation/
-- hdr_liftover/
-- orthology/
-	- orthofinder/
-		- orthofinder_output/
-		- proteomes/
-			- accessory_78/
-			- core_64/
-		- proteomes_HC_CE/
-			- OrthoFinder/
-				- Results_Nov03/
-					- Orthogroups/
-- structural_variants/
-
 ```
 processed_data/
-├── divergence_estimates/
-│   ├── CDS_fasta/
-│   │   └── orthogroups/
-│   ├── codon_alignments/
-├── genome_resources/
-│   ├── annotation/
-│   │   └── gffs/
-│   ├── genome_data/
-│   │   └── genomes/
-│   ├── isotypes/
-│   └── trees/
-├── gwas/
-│   ├── haemonchus_contortus_orthology/
-│   ├── rna_aln/
-│   │   └── coverage/
-│   └── variant_annotation/
-├── hdr_liftover/
-├── orthology/
-│   └── orthofinder/
-│       ├── orthofinder_output/
-│       ├── proteomes/
-│       └── proteomes_HC_CE/
-└── structural_variants/
+├── divergence_estimates
+│   ├── CDS_fasta
+│   │   └── orthogroups
+│   │       └── reordered_cds_seqIDs
+│   ├── codon_alignments
+│   └── single_copy_msa_orthogroups
+│       └── renamed_MSA
+├── genome_resources
+│   ├── annotation
+│   │   └── gffs
+│   ├── genome_data
+│   │   └── genomes
+│   ├── isotypes
+│   └── trees
+├── gwas
+│   ├── dump
+│   ├── haemonchus_contortus_orthology
+│   ├── rna_aln
+│   │   ├── coverage
+│   └── variant_annotation
+├── hdr_liftover
+├── orthology
+│   └── orthofinder
+│       ├── orthofinder_output
+│       ├── proteomes
+│       │   ├── accessory_78
+│       │   └── core_64
+│       └── proteomes_HC_CE
+│           └── OrthoFinder
+└── structural_variants
 ```
 
 ## divergence_estimates/
@@ -64,8 +43,18 @@ processed_data/
 This directory contains data for synonymous (Ks) and non-synonymous (Ka) divergence estimates for single-copy orthologs. 
 
 ### Contains
-- ``
-	- 
+- `CDS_fasta/`
+	- `*.spliced_cds.fa`
+		- Codon FASTAs for all protein-coding genes across all 142 strains. 
+	- `orthogroups/reordered_cds_seqIDs`
+		- `*.cds_reordered.fa`
+			- FASTA files containing codon-resolution orthologs of 12,315 single-copy orthogroups. The codon transcripts are ordered to match the strain order in the MSA protein FASTA files output from OrthoFinder.
+- `codon_alignments/`
+	- `*.aligned.codons.gapped.fa`
+		- Output from PAL2NAL. FASTA files containing gapped condon alignments from reconciling MSA protein FASTA files and codon FASTAs.
+- `single_copy_msa_orthogroups/renamed_MSA`
+	- `*.seqID_fixed.MSA.fa`
+		- MSA protein FASTA files of 12,315 single-copy orthogroups output from OrthoFinder with strain names added to seqID headers.
 
 ## genome_resources/
 
@@ -75,12 +64,12 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 - `annotation/`  
 	- `140_wild_strains_IPR_CtypeLectins.tsv`
 		- C-type lectins defined by InterProScan (IPR) annotations.
-	- `140_wild_strains_IPR_cytochromeP450.tsv` 
-        	- Cytochrome P450s defined by IPR annotations.
-	- `140_wild_strains_IPR_fBox.tsv` 
-        	- F-box proteins defined by IPR annotations.
-	- `140_wild_strains_IPR_gpcrs.tsv` 
-        	- G protein-coupled receptors (GPCRs) defined by IPR annotations.
+	- `140_wild_strains_IPR_cytochromeP450.tsv`
+		- Cytochrome P450s defined by IPR annotations.
+	- `140_wild_strains_IPR_fBox.tsv`
+		- F-box proteins defined by IPR annotations.
+	- `140_wild_strains_IPR_gpcrs.tsv`
+		- G protein-coupled receptors (GPCRs) defined by IPR annotations.
 	- `140_wild_strains_IPR_nhr.tsv`
 		- Nuclear hormone receptors (NHRs) defined by IPR annotations.
 	- `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on AWS.
@@ -112,7 +101,7 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 	- `genomes/`
 		- `*.fa`
 			- Contiguous *de novo* genome assemblies for 140 *C. elegans* wild strains. These assemblies are publicly availabe on NCBI at PRJNA1558933 and at CaeNDR.
-- `isotypes/
+- `isotypes/`
 	- `684_Ce_concordance.txt`
 		- The number of discordant sites (SNVs) and total number of sites among all isotype reference strain pairs. These data are used to create the relatedness heatmap in Figure 1b. 
 	- `Ce_isotype_groups.tsv`
