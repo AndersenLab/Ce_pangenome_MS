@@ -175,12 +175,29 @@ This directory contains output from OrthoFinder and data related to pangenome ge
 			- Proteomes for 78 strains used in the second OrthoFinder run after orthogroup construction from the core 64 strains. These proteomes are publicly available at CaeNDR.
 	- `orthofinder_output/`
 		- `Orthogroups*`
-			- Files output from OrthoFinder.		
+			- Files output from OrthoFinder.
+	- `proteomes_HC_CE/`
+		- Longest-isoform proteomes for *H. contortus* and *C. elegans*.
+		- `OrthoFinder/`
+			- `Orthogroups*`
+				- Files output from OrthoFinder.		
 
 ## structural_variants/
 
 This directory contains SV calls and related statistics and meta data.
 
 ### Contains
-- ``
-	- 
+- `141_over50_PASS_variants.tsv`
+	- A long-formatted TSV of all SVs calls among wild strains and CGC1.
+- `141_SVs_merged.vcf`
+	- A VCF file of SVs output from Jasmine.
+- `ECA3088_N2.paf`
+	- A PAF genome-genome alignment file of strain ECA3088 to the N2 reference strain to create SVbyEye plot for the large inversion on the right end of chromosome IV.
+- `Jasmine_merged_SVs.tsv`
+	- A genotype matrix of SVs merged using Jasmine in a clean TSV format.
+- `PCA_hawaii_cluster.tsv`
+	- The list of 19 Hawaiian strains that cluster together in PCA.
+
+
+
+- 
