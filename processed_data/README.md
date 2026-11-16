@@ -46,31 +46,31 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 
 ### Contains
 - `annotation/`  
-	- `140_wild_strains_IPR_CtypeLectins.tsv`
+	- `140_wild_strains_IPR_CtypeLectins.tsv` 
 		- C-type lectins defined by InterProScan (IPR) annotations.
-	- `140_wild_strains_IPR_cytochromeP450.tsv`
+	- `140_wild_strains_IPR_cytochromeP450.tsv` 
                 - Cytochrome P450s defined by IPR annotations.
-        - `140_wild_strains_IPR_fBox.tsv`
+        - `140_wild_strains_IPR_fBox.tsv` 
                 - F-box proteins defined by IPR annotations.
-        - `140_wild_strains_IPR_gpcrs.tsv`
+        - `140_wild_strains_IPR_gpcrs.tsv` 
                 - G protein-coupled receptors (GPCRs) defined by IPR annotations.
-        - `140_wild_strains_IPR_nhr.tsv`
+        - `140_wild_strains_IPR_nhr.tsv` 
                 - Nuclear hormone receptors (NHRs) defined by IPR annotations.
-        - `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on AWS.
+        - `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on AWS. 
                 - Gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
-        - `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on AWS.
+        - `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on AWS. 
                 - mRNA and gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
-        - `142_strains_longestIso_mRNAandGenes.tsv` - Large file. Publicly available on AWS.
+        - `142_strains_longestIso_mRNAandGenes.tsv` - Large file. Publicly available on AWS. 
                 - mRNA and gene coordiantes for 140 wild strains, N2, and CGC1 predicted by BRAKER.
-        - `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3`
+        - `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3` 
                 - Longest isoform gene annotations for N2 WormBase release WS283.
-        - `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3` - Large file. Publicly available on AWS.
-                - Longest isoform gene annotations with associated mRNA coordinates for N2 WormBase release WS283.
-        - `chromosome_domain_Celegans.csv`
-                - Chromsome tip, arm, and center domains defined in Rockman *et al., PLoS Genetics* 2009. 
+        - `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3` - Large file. Publicly available on AWS. 
+		- Longest isoform gene annotations with associated mRNA coordinates for N2 WormBase release WS283.
+        - `chromosome_domain_Celegans.csv` 
+		- Chromsome tip, arm, and center domains defined in Rockman *et al.*, PLoS Genetics 2009. 
 	- `gffs/`
 		- `*.longest.gff3`
-			- The longest-isoform gene models for 140 wild strains, CGC1, and N2. Unfiltered GFF files are available on CaeNDR.
+			- The longest-isoform gene models for 140 wild strains, CGC1, and N2 using agat_sp_keep_longest_isoform.pl. Unfiltered GFF files are available on CaeNDR.
 	- `haemonchus_contortus.PRJEB506.WBPS19.annotations.gene_only.longest_isoform.gff3` - Large file. Publicly available on AWS.
 		- Protein-coding GFF file for *Haemonchus contortus* WormBase ParaSite release WBPS19. 
 	- `N2_geneName_seqName.tsv`
