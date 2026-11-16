@@ -147,16 +147,35 @@ This directory contains data pertaining to the genome-wide association study of 
 This directory contains wild strain HDR liftover coordinates and related statistics and meta data.
 
 ### Contains
-- ``
-	- 
+- `hdr_genes_OG_class.tsv`
+	- A list of genes in HDRs for every strain and the corresponding orthogroup ID and gene set classification.
+- `HDR_nonHDR_relativeFract_geneset.tsv`
+	- A master table with statistics of HDR genes for every wild strain. This table is manipulated to create Figure 4a and 4b.
+- `hdr_sc_ogs.tsv`
+	- A list of single-copy orthogroups that are found in HDRs and the occupancy of ortholog presence in HDRs across wild strains.
 
 ## orthology/
 
 This directory contains output from OrthoFinder and data related to pangenome gene set analyses. 
 
 ### Contains
-- ``
-	- 
+- `all_genes_class_OGs.tsv`
+	- A long-formatted table of all genes for every strain and their orthogroup ID and gene set classification.
+- `OG_relations_matrix_count.tsv`
+	- An orthogroup matrix across all strains and the number of contributing orthologs for each strain.
+- `OG_relations_matrix_count_withN2_BRAKER.tsv`
+	- The same as `OG_relations_matrix_count.tsv` but with BRAKER-predicted genes for the N2 reference strain.
+- `orthofinder/`
+	- `core64_FINAL.tsv`
+		- The list of 64 strains used for the initial OrthoFinder run.
+	- `proteomes/`
+		- `core_64/'
+			- Proteomes for 62 strains used in the initial OrthoFinder run. These proteomes are publicly available at CaeNDR.
+		- `accessory_78`
+			- Proteomes for 78 strains used in the second OrthoFinder run after orthogroup construction from the core 64 strains. These proteomes are publicly available at CaeNDR.
+	- `orthofinder_output/`
+		- `Orthogroups*`
+			- Files output from OrthoFinder.		
 
 ## structural_variants/
 
