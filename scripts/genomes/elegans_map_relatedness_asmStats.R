@@ -64,9 +64,6 @@ MAP <- ggplot() +
 
 ####################################################################################################
 ####################################################################################################
-
-tree <- ape::read.tree("../../processed_data/genome_resources/trees/Ce_20250625_species_tree.tree")
-
 isos <- readr::read_tsv(file="../../processed_data/genome_resources/isotypes/Ce_isotype_groups.tsv") %>%
   dplyr::group_by(isotype_ref_strain) %>%
   dplyr::summarise(count=n()) %>%
