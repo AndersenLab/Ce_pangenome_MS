@@ -196,8 +196,4 @@ This directory contains SV calls and related statistics and meta data.
 - `Jasmine_merged_SVs.tsv`
 	- A genotype matrix of SVs merged using Jasmine in a clean TSV format.
 - `PCA_hawaii_cluster.tsv`
-	- The list of 19 Hawaiian strains that cluster together in PCA.
-
-
-
-- 
+	- The list of 19 Hawaiian strains that cluster together in PCA. 
