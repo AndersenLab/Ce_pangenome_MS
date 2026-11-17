@@ -1,14 +1,5 @@
 #!/bin/bash
 
-#SBATCH -J famsa_MSA
-#SBATCH -A eande106          # Allocation name
-#SBATCH -p parallel          # Partition/Queue name
-#SBATCH -t 10:00:00          # Job walltime/duration (hh:mm:ss)
-#SBATCH -N 1                 # Number of nodes
-#SBATCH -c 2                 # Number of cores
-#SBATCH --output=slurm_logs/famsa_%A_%a.out
-#SBATCH --error=slurm_logs/famsa_%A_%a.err
-
 source activate trees
 
 ### Run with: sbatch --array=1-5000%50 protein_msa.sh

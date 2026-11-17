@@ -1,12 +1,5 @@
 #!/bin/bash
 
-#SBATCH -J cds_fasta
-#SBATCH -A eande106          # Allocation name
-#SBATCH -p parallel          # Partition/Queue name
-#SBATCH -t 12:00:00          # Job walltime/duration (hh:mm:ss)
-#SBATCH -N 1                 # Number of nodes
-#SBATCH -n 12                 # Number of cores
-
 # Loop through GFFs and produce spliced CDS FASTAs
 for GFF in ../../processed_data/genome_resources/annotation/gffs/*.gff3; do
     SAMPLE=$(basename $GFF .longest.gff3)
