@@ -77,7 +77,7 @@ geo <- geo_initial %>%
 
 total_size2_geo <- total_size2 %>% dplyr::left_join(geo, by = "strain") %>% dplyr::mutate(geo = ifelse(strain == "CGC1", "Europe",geo))
 
-write.table(total_size2_geo,"../../processed_data/structural_variants/strain_SVs_cum_length.tsv", sep = '\t', row.names = F, col.names = T, quote = F)
+write.table(total_size2_geo,"../../tables/strain_SVs_cum_length.tsv", sep = '\t', row.names = F, col.names = T, quote = F)
 
 
 
