@@ -48,7 +48,7 @@ This directory contains data for synonymous (Ks) and non-synonymous (Ka) diverge
 		- `*.cds_reordered.fa`
 			- FASTA files containing codon-resolution orthologs of 12,315 single-copy orthogroups. The codon transcripts are ordered to match the strain order in the MSA protein FASTA files output from OrthoFinder.
 - `codon_alignments/`
-	- `*.aligned.codons.gapped.fa`
+	- `*.aligned.codons.gapped.fa` - Many files. Publicly available on AWS.
 		- Output from PAL2NAL. FASTA files containing gapped condon alignments from reconciling MSA protein FASTA files and codon FASTAs.
 - `single_copy_msa_orthogroups/renamed_MSA`
 	- `*.seqID_fixed.MSA.fa`
