@@ -5,7 +5,6 @@ library(ggplot2)
 library(tidyr)
 library(dplyr)
 library(ape)
-library(circlize)
 library(data.table)
 library(grid) 
 library(ggrepel)
@@ -65,7 +64,20 @@ SV_LEN <- ggplot() +
 SV_LEN
 
 # Write table of cummulative SV legnth of each type for each strain
-# write.table(total_size2,"../../processed_data/structural_variants/strain_SVs_cum_length.tsv", sep = '\t', row.names = F, col.names = T, quote = F)
+geo_initial <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo.tsv")
+hawaii_islands <- readr::read_tsv("../../processed_data/genome_resources/isotypes/elegans_isotypes_sampling_geo_hawaii_islands.tsv") %>% dplyr::select(isotype,collection_island_Hawaii)
+WSs <- total_size2 %>% dplyr::distinct(strain) %>% dplyr::pull()
+
+# Isolation site of each wild strain
+geo <- geo_initial %>%
+  dplyr::left_join(hawaii_islands, by = "isotype") %>%
+  dplyr::mutate(geo = ifelse(geo == "Hawaii", collection_island_Hawaii, geo)) %>%
+  dplyr::select(strain = isotype, geo) %>%
+  dplyr::filter(strain %in% WSs)
+
+total_size2_geo <- total_size2 %>% dplyr::left_join(geo, by = "strain") %>% dplyr::mutate(geo = ifelse(strain == "CGC1", "Europe",geo))
+
+write.table(total_size2_geo,"../../tables/strain_SVs_cum_length.tsv", sep = '\t', row.names = F, col.names = T, quote = F)
 
 
 
