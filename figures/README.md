@@ -81,8 +81,8 @@ Supplementary figures:
 		- Supplementary Figure 29
 	- `snvs_QTL.png`
 		- Supplementary Figure 30
-        - `fold_cov_genesInInterval.png`
-                - Supplementary Figure 31
+	- `fold_cov_genesInInterval.png`
+		- Supplementary Figure 31
 	- `largest_PAV_INV.png`
 		- Supplementary Figure 32
 	- `largest_INV_ECA3088.png`
