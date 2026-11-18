@@ -482,41 +482,35 @@ PAV_OG_matrix <- cowplot::plot_grid(
 ####################################################################################################
 all <- all_relations %>% dplyr::select(-Orthogroup)
 
-##################### REMOVE THESE BEFORE PUBLISHING!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-pan_final <- readRDS("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/plots/pan_iterativeOGcount.rds")
-core_final <- readRDS("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/plots/core_iterativeOGcount.rds")
-accessory_final <- readRDS("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/plots/acc_iterativeOGcount.rds")
-priv_final <- readRDS("/vast/eande106/projects/Lance/THESIS_WORK/assemblies/orthology/elegans/plots/priv_iterativeOGcount.rds")
-
 set.seed(42)
 
 n_strains_total <- ncol(all)
 n_perms <- 100
 
-# # For the pangenome
-# pan_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 142
-# iteration_pan <- 1
-#
-# for (i in 2:n_strains_total) {
-#   for (it_i in 1:n_perms) {
-#     # pick k random strains
-#     cols <- sample(colnames(all), size = i, replace = FALSE)
-#     subset <- all[, cols, drop = FALSE] # subset all df to k strains
-# 
-#     subset <- subset %>% dplyr::filter(!if_all(everything(), is.na))
-#     all_OGs <- nrow(subset)
-#     # print(all_OGs)
-#     print(paste0("On strain subset: ",i,", and iteration: ", it_i))
-# 
-#     pan_list[[iteration_pan]] <- data.frame(
-#       n_strains = i,
-#       replicate = it_i,
-#       n_core_ogs = all_OGs)
-#     iteration_pan <- iteration_pan + 1
-#   }
-# }
-# 
-# pan_final <- dplyr::bind_rows(pan_list)
+ # For the pangenome
+ pan_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 142
+ iteration_pan <- 1
+
+ for (i in 2:n_strains_total) {
+   for (it_i in 1:n_perms) {
+     # pick k random strains
+     cols <- sample(colnames(all), size = i, replace = FALSE)
+     subset <- all[, cols, drop = FALSE] # subset all df to k strains
+ 
+     subset <- subset %>% dplyr::filter(!if_all(everything(), is.na))
+     all_OGs <- nrow(subset)
+     # print(all_OGs)
+     print(paste0("On strain subset: ",i,", and iteration: ", it_i))
+ 
+     pan_list[[iteration_pan]] <- data.frame(
+       n_strains = i,
+       replicate = it_i,
+       n_core_ogs = all_OGs)
+     iteration_pan <- iteration_pan + 1
+   }
+ }
+ 
+ pan_final <- dplyr::bind_rows(pan_list)
 
 pan_summary <- pan_final %>%
   dplyr::group_by(n_strains) %>%
@@ -528,39 +522,39 @@ pan_summary <- pan_final %>%
     q95         = quantile(n_core_ogs, 0.95)) %>%
   dplyr::ungroup()
 
-# # For the core pangenome
-# res_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 141
-# iteration <- 1
-# 
-# for (i in 2:n_strains_total) {
-#   for (it_i in 1:n_perms) {
-#     # pick k random strains
-#     cols <- sample(colnames(all), size = i, replace = FALSE)
-#     subset <- all[, cols, drop = FALSE] # subset all df to k strains
-# 
-#     # binarize and count core
-#     core_calc <- subset %>%
-#       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
-#       dplyr::mutate(sum = rowSums(across(everything()))) %>%
-#       dplyr::mutate(freq = (sum / i)) %>%
-#       dplyr::mutate(class = case_when(freq == 1 ~ "core")) %>%
-#       dplyr::filter(class == "core")
-# 
-#     # print(head(core_calc))
-#     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
-# 
-#     core_count <- nrow(core_calc)
-#     # print(core_count)
-# 
-#     res_list[[iteration]] <- data.frame(
-#       n_strains = i,
-#       replicate = it_i,
-#       n_core_ogs = core_count)
-#     iteration <- iteration + 1
-#   }
-# }
-# 
-# core_final <- dplyr::bind_rows(res_list)
+ # For the core pangenome
+ res_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 141
+ iteration <- 1
+ 
+ for (i in 2:n_strains_total) {
+   for (it_i in 1:n_perms) {
+     # pick k random strains
+     cols <- sample(colnames(all), size = i, replace = FALSE)
+     subset <- all[, cols, drop = FALSE] # subset all df to k strains
+ 
+     # binarize and count core
+     core_calc <- subset %>%
+       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
+       dplyr::mutate(sum = rowSums(across(everything()))) %>%
+       dplyr::mutate(freq = (sum / i)) %>%
+       dplyr::mutate(class = case_when(freq == 1 ~ "core")) %>%
+       dplyr::filter(class == "core")
+ 
+     # print(head(core_calc))
+     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
+ 
+     core_count <- nrow(core_calc)
+     # print(core_count)
+ 
+     res_list[[iteration]] <- data.frame(
+       n_strains = i,
+       replicate = it_i,
+       n_core_ogs = core_count)
+     iteration <- iteration + 1
+   }
+ }
+ 
+ core_final <- dplyr::bind_rows(res_list)
 
 core_summary <- core_final %>%
   dplyr::group_by(n_strains) %>%
@@ -574,43 +568,43 @@ core_summary <- core_final %>%
 
 
 # For the accessory pangenome
-# res_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 141
-# iteration <- 1
-# 
-# for (i in 2:n_strains_total) {
-#   for (it_i in 1:n_perms) {
-#     # pick k random strains
-#     cols <- sample(colnames(all), size = i, replace = FALSE)
-#     subset <- all[, cols, drop = FALSE] # subset all df to k strains
-# 
-#     # binarize and count accessory
-#     accessory_calc <- subset %>%
-#       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
-#       dplyr::mutate(sum = rowSums(across(everything()))) %>%
-#       dplyr::mutate(freq = (sum / i)) %>%
-#       dplyr::mutate(
-#         class = case_when(
-#           freq == 1 ~ "core",
-#           freq > 1/i & freq < 1 ~ "accessory",
-#           freq == 1/i ~ "private",
-#           TRUE ~ "undefined")) %>%
-#       dplyr::filter(class == "accessory")
-# 
-#     # print(head(accessory_calc))
-#     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
-# 
-#     accessory_count <- nrow(accessory_calc)
-#     # print(accessory_count)
-# 
-#     res_list[[iteration]] <- data.frame(
-#       n_strains = i,
-#       replicate = it_i,
-#       n_accessory_ogs = accessory_count)
-#     iteration <- iteration + 1
-#   }
-# }
-# 
-# accessory_final <- dplyr::bind_rows(res_list)
+ res_list <- vector("list", length = n_strains_total - 1) # -1 because we iterate 2 - 141
+ iteration <- 1
+ 
+ for (i in 2:n_strains_total) {
+   for (it_i in 1:n_perms) {
+     # pick k random strains
+     cols <- sample(colnames(all), size = i, replace = FALSE)
+     subset <- all[, cols, drop = FALSE] # subset all df to k strains
+ 
+     # binarize and count accessory
+     accessory_calc <- subset %>%
+       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
+       dplyr::mutate(sum = rowSums(across(everything()))) %>%
+       dplyr::mutate(freq = (sum / i)) %>%
+       dplyr::mutate(
+         class = case_when(
+           freq == 1 ~ "core",
+           freq > 1/i & freq < 1 ~ "accessory",
+          freq == 1/i ~ "private",
+           TRUE ~ "undefined")) %>%
+       dplyr::filter(class == "accessory")
+ 
+     # print(head(accessory_calc))
+     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
+ 
+     accessory_count <- nrow(accessory_calc)
+     # print(accessory_count)
+ 
+     res_list[[iteration]] <- data.frame(
+       n_strains = i,
+       replicate = it_i,
+       n_accessory_ogs = accessory_count)
+     iteration <- iteration + 1
+   }
+ }
+ 
+ accessory_final <- dplyr::bind_rows(res_list)
 
 accessory_summary <- accessory_final %>%
   dplyr::group_by(n_strains) %>%
@@ -623,43 +617,43 @@ accessory_summary <- accessory_final %>%
   dplyr::ungroup()
 
 # For the private pangenome
-# res_list <- vector("list", length = n_strains_total -1)
-# iteration <- 1
-# 
-# for (i in 2:n_strains_total) {              # NEED TO BEGIN ITERATION ON A SINLE STRAIN WHEN CALCULATING PRIVATE
-#   for (it_i in 1:n_perms) {
-#     # pick k random strains
-#     cols <- sample(colnames(all), size = i, replace = FALSE)
-#     subset <- all[, cols, drop = FALSE] # subset all df to k strains
-# 
-#     # binarize and count accessory
-#     priv_calc <- subset %>%
-#       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
-#       dplyr::mutate(sum = rowSums(across(everything()))) %>%
-#       dplyr::mutate(freq = (sum / i)) %>%
-#       dplyr::mutate(
-#         class = case_when(
-#           freq == 1 ~ "core",
-#           freq > 1/i & freq < 1 ~ "accessory",
-#           freq == 1/i ~ "private",
-#           TRUE ~ "undefined")) %>%
-#       dplyr::filter(class == "private")
-# 
-#     # print(head(priv_calc))
-#     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
-# 
-#     priv_count <- nrow(priv_calc)
-#     # print(priv_count)
-# 
-#     res_list[[iteration]] <- data.frame(
-#       n_strains = i,
-#       replicate = it_i,
-#       n_priv_ogs = priv_count)
-#     iteration <- iteration + 1
-#   }
-# }
-# 
-# priv_final <- dplyr::bind_rows(res_list)
+ res_list <- vector("list", length = n_strains_total -1)
+ iteration <- 1
+ 
+ for (i in 2:n_strains_total) {              # NEED TO BEGIN ITERATION ON A SINLE STRAIN WHEN CALCULATING PRIVATE
+   for (it_i in 1:n_perms) {
+     # pick k random strains
+     cols <- sample(colnames(all), size = i, replace = FALSE)
+     subset <- all[, cols, drop = FALSE] # subset all df to k strains
+ 
+     # binarize and count accessory
+     priv_calc <- subset %>%
+       dplyr::mutate(across(everything(), ~ ifelse(is.na(.),0, ifelse(. >= 1, 1, .)))) %>%
+       dplyr::mutate(sum = rowSums(across(everything()))) %>%
+       dplyr::mutate(freq = (sum / i)) %>%
+       dplyr::mutate(
+         class = case_when(
+           freq == 1 ~ "core",
+           freq > 1/i & freq < 1 ~ "accessory",
+           freq == 1/i ~ "private",
+           TRUE ~ "undefined")) %>%
+       dplyr::filter(class == "private")
+ 
+     # print(head(priv_calc))
+     print(paste0("On strain subset: ", i,", and iteration: ", it_i))
+ 
+     priv_count <- nrow(priv_calc)
+     # print(priv_count)
+ 
+     res_list[[iteration]] <- data.frame(
+       n_strains = i,
+       replicate = it_i,
+       n_priv_ogs = priv_count)
+     iteration <- iteration + 1
+   }
+ }
+ 
+ priv_final <- dplyr::bind_rows(res_list)
 
 priv_summary <- priv_final %>%
   dplyr::group_by(n_strains) %>%

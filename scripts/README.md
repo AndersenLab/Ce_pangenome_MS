@@ -97,28 +97,53 @@ This directory performs HDR liftover to wild strain genomic coordinates using ge
 
 ## orthology/
 
-This directory
+This directory contains scripts pertaining to orthogroup identification and gene set analysis.
 
 ### Contains
 - `64_core_selectionOrthoFinder.R`
+	- This script identifies the 64 *C. elegans* strains that should be used for "core orthogroup" identification based on the metric of patristic distance.
 - `CE_HC_QTL_orthology.R`
+	- This script identifies shared orthologs between the ML resistance QTL in *C. elegans* and *H. contortus*.
+	- This script creates Supplementary Table 16.
 - `gene_family_heatmaps.R`
+	- This script creates presence/absence ortholog heatmaps based on clustering of accessory orthogroups.
+	- This script creates Supplementary Figure 14.
 - `gene_set_visualization.R`
+	- This script performs statistics and visualization of *C. elegans* gene sets
+	- This script creates Figure 3.
+	- This script creates Supplementary Figures 10, 11, and 12.
+	- This script creates Supplementary Table 5.
 - `orthofinder3_haemonchus_contortus.sh`
+	- This script initializes OrthoFinder to identify orthologous genes betwen *C. elegans* and *H. contortus*.
 - `orthofinder3.sh`
+	- This script initializes OrthoFinder to identify orthologous genes among 142 *C. elegans* wild strains.
 - `pca_hawaiian_analyses.R`
+	- This script identifies SVs specific to 19 Hawaiian strains that cluster in PCA (Figure 2) and orthologs that are unique, or uniquely missing, among 19 Hawaiian strains.
+	- This script produces Supplementary Table 4.
 
 ## structural_variants/
 
-This directory...
+This directory contains scripts to identify, merge, and visualize structural variants.
 
 ### Contains
 - `concatenate_filter_VCFs.sh`
+	- This script concatenates and filters all strain SV VCF files to a human-readable TSV format.
 - `jasmine_SVmerging.sh`
+	- This script use Jasmine to merge SV calls among 141 *C. elegans* strains.
 - `jasmine_TSV_creation.sh`
+	- This script creates a human-readable TSV from the VCF output from Jasmine.
 - `pav.sh`
+	- This script uses PAV to identify SVs across 141 *C. elegans* strains.
 - `structural_variants_stats.R`
+	- This script performs statistics and visualization of SVs.
+	- This script creates Supplementary Figures 3-9.
+	- This script creates Supplementary Table 3.
 - `structural_variants_visualization.R`
+	- This script performs statistics and visualization of SVs.
+	- This script creates Figure 2.
+	- This script creates Supplementary Table 2. 
 - `visualization_SVbyEye.R`
+	- This script uses SVbyEye to visualize a large inversion on the right end of chromosome IV.
+	- This script creates Supplementary Figure 33.
 
 

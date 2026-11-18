@@ -1,29 +1,16 @@
 #!/bin/bash
 
-#SBATCH -J RNA_cov
-#SBATCH -A eande106
-#SBATCH -p parallel
-#SBATCH -t 12:00:00
-#SBATCH -c 2
-#SBATCH --mem=16G
-
 set -euo pipefail
 
-#GFF_LIST="/vast/eande106/projects/Lance/THESIS_WORK/misc/list_of_GFFs.txt"
+GFF=$(sed -n ${SLURM_ARRAY_TASK_ID}p $GFF_LIST)
 
-#GFF=$(sed -n ${SLURM_ARRAY_TASK_ID}p $GFF_LIST)
+base=$(basename $GFF)
+strain=${base%%.*}
 
-GFF="/vast/eande106/data/c_elegans/genomes/PRJNA13758/WS283/csq/c_elegans.PRJNA13758.WS283.csq.gff3"
-BAM="/vast/eande106/projects/Lance/THESIS_WORK/manuscript_repos/pangenome_Ce_MS/processed_data/gwas/rna_aln/N2/N2_Aligned.sortedByCoord.out.bam"
-strain="N2"
+RNA_path="../../processed_data/gwas/rna_aln"
+OUT="../../processed_data/gwas/rna_aln/coverage"
 
-#base=$(basename $GFF)
-#strain=${base%%.*}
-
-#RNA_path="/vast/eande106/projects/Lance/THESIS_WORK/gene_annotation/processed_data/rna_WS_genome_aln/STAR_output"
-OUT="/vast/eande106/projects/Lance/THESIS_WORK/manuscript_repos/pangenome_Ce_MS/processed_data/gwas/rna_aln/coverage"
-
-#BAM="$RNA_path/$strain/${strain}_Aligned.sortedByCoord.out.bam"
+BAM="$RNA_path/$strain/${strain}_Aligned.sortedByCoord.out.bam"
 
 mkdir -p $OUT
 
