@@ -23,9 +23,8 @@ WSs <- long_class %>%
 # ======================================================================================================================================================================================== #
 # IPR results
 # ======================================================================================================================================================================================== #
-all_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>%
-  dplyr::filter(!grepl("CGC1_", tran), !grepl("N2_", tran)) %>% # using IPR results for wild strains only 
-  dplyr::select(tran, IPR_accession, IPR_description, GO)
+all_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv") %>%
+  dplyr::filter(!grepl("CGC1_", tran), !grepl("N2_", tran)) # using IPR results for wild strains only 
 
 ws_hdr_genes <- readr::read_tsv("../../tables/wild_strain_genes_inHDRs.tsv") %>%
   dplyr::mutate(gene = paste0(strain, "_", gene))
@@ -36,8 +35,6 @@ ws_hdr_core_genes <- ws_hdr_genes %>% dplyr::filter(class == "core") %>% dplyr::
 all_ws_hdr_genes <- ws_hdr_genes %>% dplyr::pull(gene)
 
 all_ipr_background <- all_ipr %>% 
-  dplyr::filter(!is.na(IPR_description) & IPR_accession != "-") %>%
-  dplyr::distinct(tran, IPR_accession, IPR_description) %>% # only one type of IPR annotation per gene
   dplyr::group_by(IPR_accession) %>%
   dplyr::mutate(n_IPR_acc_background = n()) %>%
   dplyr::ungroup() %>%
@@ -575,9 +572,8 @@ ggsave("../../figures/wild_strain_HDRs_gene_set_enrichment.png", final_prop_enri
 ##########################################################################################
 ### Look at rarefaction of enriched gene families ###
 ##########################################################################################
-pan_ipr_cleaned <-readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>% 
+pan_ipr_cleaned <-readr::read_tsv("../../tables/IPR_annotation_142strains.tsv") %>% 
   tidyr::separate(tran, into = c("strain","gene"), sep = "_") %>% 
-  dplyr::filter(IPR_description != "-") %>% 
   dplyr::select(strain,gene,IPR_description)
 
 pan_gpcrs <- pan_ipr_cleaned %>% 
@@ -586,7 +582,7 @@ pan_gpcrs <- pan_ipr_cleaned %>%
   dplyr::group_by(strain) %>%
   dplyr::mutate(n_gpcrs = n()) %>%
   dplyr::ungroup() %>%
-  dplyr::arrange(desc(n_gpcrs)) 
+  dplyr::arrange(desc(n_gpcrs))
 
 
 cleaned_pan_gpcrs <- pan_gpcrs %>% dplyr::mutate(gene = sub("\\.[^.]*$", "", gene)) %>% dplyr::select(-n_gpcrs) %>% dplyr::filter(strain != "N2", strain != "CGC1")

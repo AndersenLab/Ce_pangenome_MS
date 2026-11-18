@@ -230,9 +230,8 @@ kaks_highest_OGs <- kaks_highest %>% dplyr::pull(OG)
 kaks_highest_OGs_genes <- all_ws_genes_class_og %>% dplyr::filter(Orthogroup %in% kaks_highest_OGs) %>%
   dplyr::mutate(strain_transcript = paste0(strain,"_", gene))
 
-ipr_annotations <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("strain_transcript", "MD5_digest",	"Seq_length",	"Application",	"Signature_accession",	"Signature_description",	"Amino_acid_start_position", "Amino_acid_end_position", "Score", "status", "date", "IPR_accession", "IPR_description", "GO_ID", "pathway")) %>%
-  dplyr::filter(IPR_description != "-") %>%
-  dplyr::select(strain_transcript, IPR_accession, IPR_description) %>%
+ipr_annotations <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv")  %>%
+  dplyr::select(strain_transcript = tran, IPR_accession, IPR_description) %>%
   dplyr::mutate(strain_transcript = sub("\\.[^.]*$", "", strain_transcript)) %>%
   dplyr::mutate(strain_transcript = sub("[a-z]+$", "", strain_transcript))
 

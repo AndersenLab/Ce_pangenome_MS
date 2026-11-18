@@ -776,26 +776,21 @@ ggsave("../../figures/supplementary/sv_overlap_genes.png", width = 7.5, height =
 #############################################################################
 sv_overlap_genes <- svs_inCodingRegions %>% dplyr::filter(!is.na(alias))
 
-n2_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv", col_names = c("tran", "MD5_digest", "seq_length", "app", "signature_accession", "signature_description", "start", "end", "score", "status", "date", "IPR_accession","IPR_description","GO", "pathways")) %>%
-  dplyr::filter(grepl("N2_", tran)) %>% 
+n2_ipr <- readr::read_tsv("../../tables/IPR_annotation_142strains.tsv") %>%
+  dplyr::filter(grepl("N2_", tran)) %>%
   dplyr::select(tran, IPR_description)
 
 n2_ipr_clean <- n2_ipr %>% dplyr::mutate(tran = gsub("N2_","", tran)) %>%
   dplyr::mutate(tran = sub("\\.[^.]*$", "", tran)) %>% # removing trailing isoform numbers
-  dplyr::mutate(tran = sub("[A-Za-z]+$", "", tran)) %>% # removing trailing letters
-  dplyr::filter(IPR_description != "-" & !is.na(IPR_description))
+  dplyr::mutate(tran = sub("[A-Za-z]+$", "", tran)) # removing trailing letters
   
 sv_overlap_ipr <- sv_overlap_genes %>% dplyr::left_join(n2_ipr_clean, by = c('sequence_name' = "tran")) %>% 
   dplyr::filter(!is.na(IPR_description)) %>%
   dplyr::distinct(alias, IPR_description) %>%
-  # dplyr::distinct(alias, sv_type, IPR_description) %>%
-  # dplyr::group_by(sv_type, IPR_description) %>%
   dplyr::group_by(IPR_description) %>%
   dplyr::mutate(ipr_gene_count = n()) %>%
   dplyr::ungroup() %>%
   dplyr::distinct(IPR_description, ipr_gene_count) %>%
-  # dplyr::mutate(total_genes = sum(ipr_gene_count)) %>%
-  # dplyr::mutate(prop_ipr_gene_count = (ipr_gene_count / total_genes) * 100) %>%
   dplyr::arrange(desc(ipr_gene_count)) %>%
   dplyr::rename(`IPR description` = IPR_description, `Gene count` = ipr_gene_count)
 
