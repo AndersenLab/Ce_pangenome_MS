@@ -5,7 +5,7 @@ library(readr)
 library(rstatix)
 library(ggpubr)
 library(ape)
-  
+
 # Calculating stats for every wild strain and appending to a master dataframe
 OG_enrichment <- function(ws_hdr_ogs, strains, og_matrix_relationships, single_copy_ogs) {
   
@@ -852,7 +852,7 @@ N2_OG_enrichment <- function(all_N2_genes_OGs, strains, og_matrix_relationships,
 
 # Preparing data:
 ## All wild strain HDR calls in relation to N2
-hdrs <- readr::read_tsv("../../data//20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom","start","end","strain")) %>% dplyr::filter(strain %in% strains)
+hdrs <- readr::read_tsv("../../data/genomic_resources/20250625_c_elegans_divergent_regions_strain.bed", col_names = c("chrom","start","end","strain")) %>% dplyr::filter(strain %in% strains)
 ## All N2 genes
 n2_genes_coords <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3") %>% dplyr::select(chrom = seqid,type,start,end,attributes) %>%
   dplyr::filter(type == "mRNA") %>% tidyr::separate(attributes, into = c("gene","rest"), sep = ";") %>% dplyr::select(-rest) %>% dplyr::mutate(gene = gsub("ID=transcript:","",gene)) %>% dplyr::select(gene, chrom, start, end) %>%
@@ -1162,7 +1162,7 @@ sc_prop_all_classes <- ggplot(master) +
              position = position_jitterdodge(jitter.width = 0.4, dodge.width = 0.75), size = 0.6) +
   scale_fill_manual(values = c("HDR" = "red", "non-HDR" = "blue")) +
   facet_wrap(~class, nrow = 1) +
-  labs(y = "Proportion of single-copy orthogroups (%)", fill = NULL) +
+  labs(y = "Percent of single-copy orthogroups (%)", fill = NULL) +
   theme(
     strip.text = element_text(size = 8, color ='black'),
     axis.title.x = element_blank(),
@@ -1180,7 +1180,7 @@ sc_prop_all_classes <- ggplot(master) +
 sc_prop_all_classes
 
 # Save the plot!
-# ggsave("../../figures/supplementary/single_copy_OG_inHDRs.png", sc_prop_all_classes, width = 7.5, height = 5, dpi = 600)
+ggsave("../../figures/supplementary/single_copy_OG_inHDRs.png", sc_prop_all_classes, width = 7.5, height = 5, dpi = 600)
 
 
 
