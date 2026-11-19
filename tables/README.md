@@ -17,7 +17,7 @@ This directory contains all supplementary tables.
 	- Supplementary Table 7: Wild strain genes in HDRs.
 - `WS_HDR_liftover_finalstats.tsv`
 	- Supplementary Table 8: Statistics of wild strain HDRs and the genes contained in them.
-- `IPR_annotation_142strains.tsv` - Large file. Publicly available on AWS.
+- `IPR_annotation_142strains.tsv` - Large file. Publicly available on [AWS](caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/PIR_annotation_142strains.tsv).
 	- Supplementary Table 9: IPR annotations of 142 C. elegans strains.
 - `enriched_IPR_inHDRs.tsv`
 	- Supplementary Table 10: Enriched IPR terms in wild strain HDRs.
