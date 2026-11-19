@@ -204,6 +204,26 @@ HIST <- ggdraw() +
             width = 0.5,  # width of inset (0-1)
             height = 0.5)  # height of inset (0-1)
 
+### How many total genes do not have orthology with N2? ##3
+classification_nonN2 <- all_relations %>%
+  dplyr::mutate(across(2:(ncol(.)), ~ ifelse(. >= 1, 1, .))) %>%
+  dplyr::mutate(sum = rowSums(across(-1, ~ ., .names = NULL), na.rm = TRUE)) %>%
+  dplyr::mutate(freq = (sum / length(strainCol_c2_u))) %>%
+  dplyr::mutate(
+    class = case_when(
+      freq == 1 ~ "core",
+      freq > private_freq & freq < 1 ~ "accessory",
+      freq == private_freq ~ "private",
+      TRUE ~ "undefined")) %>%
+  dplyr::select(Orthogroup, class)
+
+og_count_table_class <- og_count_table %>% dplyr::left_join(classification_nonN2, by = "Orthogroup") %>%
+  dplyr::filter(class == "accessory" | class == "private") %>%
+  dplyr::filter(is.na(N2)) %>%
+  dplyr::select(-Orthogroup, -class) %>%
+  dplyr::mutate(total_row_geneCount = rowSums(dplyr::across(everything()), na.rm = TRUE)) %>%
+  dplyr::summarize(total_nonN2_genes = sum(total_row_geneCount)) # 630,641
+
 #### Visualization of how many genes contribute to each gene set for every strain
 table <- all_relations %>%
   dplyr::left_join(classification_genes %>% dplyr::select(Orthogroup, class), by = "Orthogroup") %>%
