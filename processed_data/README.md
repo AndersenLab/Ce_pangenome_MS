@@ -78,7 +78,7 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 		- mRNA and gene coordiantes for 140 wild strains, N2, and CGC1 predicted by BRAKER.
 	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3` 
 		- Longest isoform gene annotations for N2 WormBase release WS283.
-	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3` - Large file. Publicly available on AWS.
+	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3` - Large file. Publicly available on AWS.
 		- Longest isoform gene annotations with associated mRNA coordinates for N2 WormBase release WS283.
 	- `chromosome_domain_Celegans.csv`
 		- Chromsome tip, arm, and center domains defined in Rockman *et al.*, PLoS Genetics 2009.
