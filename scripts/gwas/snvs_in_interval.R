@@ -39,7 +39,7 @@ alt_strains <- tail(want,17)
 
 n2_genes_interval <- readr::read_tsv("../../processed_data/gwas/n2_genes_inInterval.txt", col_names = "gene") %>% dplyr::pull()
 
-n2_gff <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3") %>% dplyr::mutate(STRAIN="N2")
+n2_gff <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3") %>% dplyr::mutate(STRAIN="N2")
 
 
 N2_genes <- n2_gff %>%

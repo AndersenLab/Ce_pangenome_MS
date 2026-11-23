@@ -104,7 +104,7 @@ transformed_coords <- transformed_coords %>% dplyr::filter(STRAIN != "ECA396") %
 # Read in gene models
 gffCat1 <- readr::read_tsv("../../processed_data/genome_resources/annotation/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv", col_names = F)
 colnames(gffCat1) <- c("seqid","source","type","start","end","score","strand","phase","attributes","STRAIN")
-gffCat2 <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_featuresgff3") %>% dplyr::mutate(STRAIN="N2")
+gffCat2 <- ape::read.gff("../../processed_data/genome_resources/annotation/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3") %>% dplyr::mutate(STRAIN="N2")
 gffCat <- rbind(gffCat1 %>% dplyr::filter(STRAIN != "ECA396"), gffCat2) %>% 
   dplyr::filter(STRAIN %in% want)
 
