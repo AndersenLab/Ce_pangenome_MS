@@ -70,22 +70,22 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 		- G protein-coupled receptors (GPCRs) defined by IPR annotations.
 	- `140_wild_strains_IPR_nhr.tsv`
 		- Nuclear hormone receptors (NHRs) defined by IPR annotations.
-	- `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140Ws_CGC1_longestIsoGenes_BRAKER.tsv].
+	- `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140Ws_CGC1_longestIsoGenes_BRAKER.tsv).
 		- Gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
-	- `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv].
+	- `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv].
 		- mRNA and gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
-	- `142_strains_longestIso_mRNAandGenes.tsv` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/142_strains_longestIso_mRNAandGenes].
+	- `142_strains_longestIso_mRNAandGenes.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/142_strains_longestIso_mRNAandGenes).
 		- mRNA and gene coordiantes for 140 wild strains, N2, and CGC1 predicted by BRAKER.
 	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.gff3` 
 		- Longest isoform gene annotations for N2 WormBase release WS283.
-	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3].
+	- `c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/c_elegans.PRJNA13758.WS283.csq.PCfeaturesOnly.longest.w-mRNA_features.gff3).
 		- Longest isoform gene annotations with associated mRNA coordinates for N2 WormBase release WS283.
 	- `chromosome_domain_Celegans.csv`
 		- Chromsome tip, arm, and center domains defined in Rockman *et al.*, PLoS Genetics 2009.
 	- `gffs/`
 		- `*.longest.gff3`
 			- The longest-isoform gene models for 140 wild strains, CGC1, and N2 using agat_sp_keep_longest_isoform.pl. Unfiltered GFF files are available on CaeNDR.
-	- `haemonchus_contortus.PRJEB506.WBPS19.annotations.gene_only.longest_isoform.gff3` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/haemonchus_contortus.PRJEB506.WBPS19.annotations.gene_only.longest_isoform.gff3].
+	- `haemonchus_contortus.PRJEB506.WBPS19.annotations.gene_only.longest_isoform.gff3` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/haemonchus_contortus.PRJEB506.WBPS19.annotations.gene_only.longest_isoform.gff3).
 		- Protein-coding GFF file for *Haemonchus contortus* WormBase ParaSite release WBPS19. 
 	- `N2_geneName_seqName.tsv`
 		- Gene name and corresponding sequence names for N2 WormBase GFF file release WS283.
@@ -139,7 +139,7 @@ This directory contains data pertaining to the genome-wide association study of 
 	- `*.bam`
 		- Alignments files of RNA seq to respective genomes.
 	- `coverage/`
-		- `ALL_strains_cov.txt` - Large file. Publicly available on (AWS)[https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/ALL_strains_cov.txt].
+		- `ALL_strains_cov.txt` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/ALL_strains_cov.txt).
 			- Mean RNA coverage for exomes of wild strains and N2.
 	
 ## hdr_liftover/
