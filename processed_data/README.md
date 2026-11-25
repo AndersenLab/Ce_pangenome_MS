@@ -72,7 +72,7 @@ This directory contains data pertaining to *C. elegans* genomes assembled in thi
 		- Nuclear hormone receptors (NHRs) defined by IPR annotations.
 	- `140Ws_CGC1_longestIsoGenes_BRAKER.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140Ws_CGC1_longestIsoGenes_BRAKER.tsv).
 		- Gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
-	- `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv].
+	- `140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/140WSs_CGC1_longestIso_mRNAandGenes_BRAKER.tsv).
 		- mRNA and gene coordinates for 140 wild strains and CGC1 predicted by BRAKER.
 	- `142_strains_longestIso_mRNAandGenes.tsv` - Large file. Publicly available on [AWS](https://caendr-open-access-data-bucket.s3.us-east-2.amazonaws.com/Ce_Pangenome_MS/142_strains_longestIso_mRNAandGenes).
 		- mRNA and gene coordiantes for 140 wild strains, N2, and CGC1 predicted by BRAKER.
